@@ -9,6 +9,9 @@ TO DO:
 - Make it easier/clearer to preserve/skip IBurst, RawAltimeter etc..
 - Time: Specify epoch?
 
+- Investigate what the RuntimeError is in the tilt function..
+- Look over what print messages are necessary (definitely cut some from the reshaper)
+
 '''
 
 ##############################################################################
@@ -18,9 +21,8 @@ TO DO:
 import numpy as np
 from scipy.io import loadmat
 import xarray as xr
-import glob 
-#
-import pdb
+from matplotlib.dates import num2date 
+
 ##############################################################################
 
 def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
@@ -32,10 +34,10 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
     -------
 
     file_list: list of .mat files.
-    fold: If True, reshape all time series from a single 'time_average'
-          dimension to 2D ('TIME', 'SAMPLE') where we TIME is the 
-          mean time of each ensemble and SAMPLE is each sample in the 
-          ensemble. 
+    reshape: If True, reshape all time series from a single 'time_average'
+             dimension to 2D ('TIME', 'SAMPLE') where we TIME is the 
+             mean time of each ensemble and SAMPLE is each sample in the 
+             ensemble. 
     lat, lon: Lat/lon of deployment (single point)
     include_raw_altimeter: Include raw altimeter signal if available.
                            (Typically on a single time grid) 
@@ -86,18 +88,63 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
     else:
         DX.attrs['pressure_offset'] = pressure_offsets
 
-    DX.attrs['lat'] = lat
-    DX.attrs['lon'] = lon
+
 
 
     # Add tilt (from pitch/roll)
     DX = _add_tilt(DX)
 
+    # Sort by time
+    DX = DX.sortby('time_average')
+
     # Reshape
     if reshape:
         DX = reshape_ensembles(DX)
 
+    # Add some attributes
+    DX.attrs['lat'] = lat
+    DX.attrs['lon'] = lon
+    # Grab the (de facto) sampling rate
+    DX.attrs['sampling_interval_sec'] = np.round(np.ma.median(
+        np.diff(DX.time_average)*86400), 3)
+
+    print('Done. Run sig_funcs.overview() to print some additional details.')
+
     return DX
+
+##############################################################################
+
+def overview(DX):
+    '''
+    Prints some basic information about the dataset.
+    '''
+
+    # Time range
+    datefmt = '%d %b %Y %H:%M'
+    starttime = num2date(DX.TIME[0]).strftime(datefmt)
+    endtime = num2date(DX.TIME[-1]).strftime(datefmt)
+    ndays = DX.TIME[-1]-DX.TIME[0]
+
+    print('\nTIME RANGE:\n%s  -->  %s  (%.1f days)'%(
+        starttime, endtime, ndays))
+    print('Time between ensembles: %.1f min.'%(DX.Plan_ProfileInterval/60))
+    print('Time between samples in ensembles: %.1f sec.'%(
+        DX.sampling_interval_sec))
+
+
+    # Pressure
+    med_pres = np.ma.median(DX.Average_AltimeterPressure)
+    std_pres = np.ma.std(DX.Average_AltimeterPressure)
+    print('\nPRESSURE:\nMedian (STD) of altimeter pressure:'
+          ' %.1f dbar (%.1f dbar)  - with fixed atm offset %.3f dbar.' %(
+            med_pres, std_pres, DX.attrs['pressure_offset']))
+
+    # Size
+    print('\nSIZE:\nTotal %i time points.'%(DX.dims['TIME']*DX.dims['SAMPLE']))
+    print('Split into %i ensembles with %i sample per ensemble.'%(
+          DX.dims['TIME'], DX.dims['SAMPLE']))
+    print('Ocean velocity bins: %i.'%(DX.dims['bins']))
+
 ##############################################################################
 
 def reshape_ensembles(DX):
@@ -157,7 +204,6 @@ def reshape_ensembles(DX):
     # Loop through variables, reshape where necessary
     for var_ in DX.variables:
         if DX[var_].dims == ('time_average',):
-           # pdb.set_trace()
             DXrsh[var_] = (('TIME', 'SAMPLE'), 
                     np.ma.reshape(DX[var_], (Nens, Nsamp_per_ens)),
                     DX[var_].attrs)
@@ -177,6 +223,7 @@ def reshape_ensembles(DX):
                     np.ma.reshape(DX[var_], (
                         Nens, Nsamp_per_ens, DX.dims['beams'])),
                     DX[var_].attrs)
+
 
     return DXrsh
 
@@ -299,6 +346,9 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
             ' *AverageRawAltimeter_Time*. Converted'
             ' using mat_to_py_time.') 
         dx.along_altimeter.attrs['description'] = ('Index along altimeter.') 
+
+    for conf_ in b['conf']:
+       dx.attrs[conf_] = b['conf'][conf_]
  
     units_str = ''
     for unit_ in b['units']:
@@ -310,13 +360,7 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
         desc_str += '%s: %s\n'%(desc_, b['desc'][desc_])
     dx.attrs['desc'] = desc_str
 
-    conf_str = ''
-    for conf_ in b['conf']:
-       conf_str += '%s: %s\n'%(conf_, b['conf'][conf_])
-    dx.attrs['conf'] = conf_str
-
     # Read pressure offset
-
     pressure_offset = b['conf']['PressureOffset']
 
     return dx, pressure_offset
@@ -463,7 +507,7 @@ def _add_tilt(d):
             - np.sin(d.Average_Roll.data/180*np.pi) ** 2)))
         d['tilt_Average'].attrs  =  tilt_attrs
     except:
-        print('(No AverageIce variables)')
+        pass
 
     try:
         d['tilt_AverageIce'] = (('time_average'), 
@@ -472,9 +516,6 @@ def _add_tilt(d):
             - np.sin(d.AverageIce_Roll.data/180*np.pi) ** 2)))
         d['tilt_AverageIce'].attrs  = tilt_attrs
     except:
-        print('(No AverageIce variables)')
+        pass
 
     return d
-
-
-

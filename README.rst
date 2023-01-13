@@ -1,5 +1,5 @@
-SignatureProc
-#############
+Signature_PyProc
+################
 
 Version 0.0.1: *Under development.* 
 
@@ -67,12 +67,49 @@ stores as an *xarray* Dataset.
 
 Function for calculating tilt from pitch and roll.
 
+´´sig_append_external.py´´
+
+Functions to append external datasets to an xarray Dataset containing Nortek
+Signature data. 
+
+- General function for adding and interpolating any time series data:
+
+Some specialized wrapper functions used for loading data that 
+needs to be formatted correctly in later operations:
+
+- Add CTD data and compute sound speed (for ice draft calculations)
+- Add air pressure (for instrument depth corrections)
+- Add magnetic declination (for correction of velocity directions)
+
+
+Dependencies
+-------------
+
+*Signature_PyProc* is a Python package, and requires Python 3 (will not work on 2. 
+and has currently only been tested on 3.8).
+
+**Dependence, standard libraries:**
+
+- ``numpy`` 
+- ``scipy`` 
+- ``matplotlib`` 
+
+**Other:**
+
+- `xarray <https://docs.xarray.dev/en/stable/>`_ - data are stored and manipulated 
+  as xarray *Dataset* objects.
+- `GSW-Python <https://teos-10.github.io/GSW-Python/>`_ - used for computation of
+  sound speed.
+ 
+
+
 
 
 **EVERYTHING BELOW IS COPY-PASTED FROM ELSEWHERE - IGNORE**
 
-Dependencies
--------------
+
+
+
 
 *Adcpyproc* is a Python package, and requires Python 3 (will not work on 2. 
 and has currently only been tested on 3.8).

@@ -1,3 +1,5 @@
+testing/development/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
