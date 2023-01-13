@@ -1,8 +1,14 @@
-testing/development/
+#Øyvind's:
 
+testing/development/
+*.pyc
+
+
+# Defaults:
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
 *$py.class
 
 # Distribution / packaging
