@@ -59,10 +59,13 @@ Core functionality
 Modules
 '''''''''''''''''''
 
-´´load_and_convert.py´´
+´´sig_funcs.py´´
 
 Functions for loading one or several *.mat* files from a deployment. Reads to
-desired format, adds some metadata, stores as an *xarray* Dataset.
+desired format, reshapes to the desired (TIME, SAMPLE) 2d shape, adds some metadata,
+stores as an *xarray* Dataset.
+
+Function for calculating tilt from pitch and roll.
 
 
 
