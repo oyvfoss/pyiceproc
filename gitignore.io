@@ -1,10 +1,13 @@
-#Øyvind's:
+#### Øyvind's:
 
 testing/development/
+sigyproc/__pycache__/
+
 *.pyc
 
 
-# Defaults:
+#### Defaults:
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

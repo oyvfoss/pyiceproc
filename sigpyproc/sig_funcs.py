@@ -26,7 +26,7 @@ from matplotlib.dates import num2date
 ##############################################################################
 
 def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
-                include_raw_altimeter = False, ):
+                include_raw_altimeter = False, FOM_ice_threshold = 1e4):
     '''
     Read, convert, and concatenate .mat files exported from SignatureDeployment.
 
@@ -41,6 +41,9 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
     lat, lon: Lat/lon of deployment (single point)
     include_raw_altimeter: Include raw altimeter signal if available.
                            (Typically on a single time grid) 
+    FOM_ice_threshold: Threshold for "Figure of Merit" in the ice ADCP pings
+                       used to separate measurements in ice from measurements
+                       of water. 
 
     Output:
     -------
@@ -88,9 +91,6 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
     else:
         DX.attrs['pressure_offset'] = pressure_offsets
 
-
-
-
     # Add tilt (from pitch/roll)
     DX = _add_tilt(DX)
 
@@ -107,6 +107,12 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
     # Grab the (de facto) sampling rate
     DX.attrs['sampling_interval_sec'] = np.round(np.ma.median(
         np.diff(DX.time_average)*86400), 3)
+    # Add FOM threshold
+    DX['FOM_threshold'] = ((), FOM_ice_threshold, {'description':
+        'Figure-of merit threshold used to separate ice vs open water'})
+
+    # Add sea ice concetration estimate from FOM
+    DX = _add_SIC_FOM(DX)
 
     print('Done. Run sig_funcs.overview() to print some additional details.')
 
@@ -433,7 +439,6 @@ if False: # DEPRECATED - NOW DOING THIS IN XARRAY?
         D = sig_mat_to_dict(flist[0], include_metadata = True, 
                             **kwargs)
         sn0 = D['conf']['SerialNo']
-
         for nn, fn in enumerate(flist[1:]):
             print('Reading file %i/%i..\r'%(nn+1, len(flist)-1), end = '')
             d_ = sig_mat_to_dict(fn, include_metadata = True, 
@@ -519,3 +524,103 @@ def _add_tilt(d):
         pass
 
     return d
+
+
+##############################################################################
+
+def _add_SIC_FOM(DX, FOMthr = None):
+    '''
+    Add estimates of sea ice presence in each sample, and sea ice 
+    concentration in each ensemble, from the Figure-of-Merit (FOM) 
+    metric reported by the four slanted beam in the AverageIce data.
+
+    - Conservative estimate (no suffix): FOM<FOM_thr for ALL beams  
+    - Alternative estimate ('_ALT'): FOM<FOM_thr for ANY OF FOUR beams 
+
+    The former seems to give a better estimate of sea ice concentration.
+
+    Using the "FOM_threshold" variable in the dataset unless otherwise 
+    specified.
+
+    The sea ice concentration variables "SIC_FOM", "SIC_FOM_ALT" 
+    (percent) are typically most useful whean veraging over a longer 
+    time period (e.g. daily).
+
+    Inputs:
+    ------
+    DX: xarray Dataset containing the data.
+    FOMthr: Figure-of-Merit threshold 
+            (using "FOM_threshold" specified in DX unless otherwise
+            specified)
+
+    Outputs:
+    --------
+    DX: xarray Dataset containing the data, with added fields:
+    - ICE_IN_SAMPLE - Ice presence per sample (conservative)
+    - ICE_IN_SAMPLE_ALT - Ice presence per sample (alternative)
+    - SIC_FOM - Estimated sea ice concentration per ensemble (conservative)
+    - SIC_FOM_ALT - Estimated sea ice concentration per ensemble 
+                     (alternative)
+    '''
+    # FOM threshold for ice vs ocean     
+    if FOMthr==None:
+        FOMthr = float(DX.FOM_threshold)
+
+
+    # Find ensemble indices where we have ice
+    ALL_ICE_IN_SAMPLE = np.bool_(np.ones([DX.dims['TIME'], 
+                             DX.dims['SAMPLE']]))
+
+    ALL_WATER_IN_SAMPLE = np.bool_(np.ones([DX.dims['TIME'], 
+                             DX.dims['SAMPLE']]))
+
+    for nn in np.arange(1, 5):
+        FOMnm = 'AverageIce_FOMBeam%i'%nn
+        
+        # False if FOM<thr (IS ICE) for ANY beam
+        ALL_WATER_IN_SAMPLE *= DX[FOMnm].data > FOMthr 
+        
+        # False if FOM>thr (IS WATER) for ANY beam
+        ALL_ICE_IN_SAMPLE *= DX[FOMnm].data < FOMthr
+
+    ANY_ICE_IN_SAMPLE = ~ALL_WATER_IN_SAMPLE
+
+    DX['ICE_IN_SAMPLE'] = (('TIME', 'SAMPLE'), ALL_ICE_IN_SAMPLE,
+        {'long_name':('Identification of sea ice in sample'
+                     ' (conservative estimate)'), 
+         'desc':'Binary classification (ice/not ice), where "ice" '
+         'is when FOM < %.0f in ALL of the 4 slanted beams.'%FOMthr})
+
+
+    DX['ICE_IN_SAMPLE_ANY'] = (('TIME', 'SAMPLE'), ANY_ICE_IN_SAMPLE,
+        {'long_name':('Identification of sea ice in sample'),
+         'desc':'Binary classification (ice/not ice), where "ice" is when '
+         'FOM < %.0f in ONE OR MORE of the 4 slanted beams.'%FOMthr})
+
+    SIC = ALL_ICE_IN_SAMPLE.mean(axis = 1)*100
+
+    DX['SIC_FOM'] = (('TIME'), SIC, {'long_name':'Sea ice concentration',
+        'desc':('"Sea ice concentration" in each '
+        'ensemble based on FOM criterion. '
+        'Calculated as the fraction of '
+        'samples per ensemble where FOM is below %.0f for ALL '
+        'of the four slanted beams.')%FOMthr, 
+        'units':'%',
+        'note':('Typically most useful when averaged over a longer '
+        'period (e.g. daily)')})
+
+    SIC_ALT = ANY_ICE_IN_SAMPLE.mean(axis = 1)*100
+
+    DX['SIC_FOM_ALT'] = (('TIME'), SIC_ALT, 
+        {'long_name':'Sea ice concentration (alternative)',
+        'desc':('"Sea ice concentration" in each '
+        'ensemble based on FOM criterion. '
+        'Calculated as the fraction of '
+        'samples per ensemble where FOM is below %.0f for ALT LEAST ONE '
+        'of the four slanted beams.')%FOMthr, 
+        'units':'%',
+        'note':('*SIC_FOM_ALT* seems a bit "trigger happy" - recommended'
+                ' to use the more conservative *SIC_FOM*.\nTypically most'
+                ' useful when averaged over a longer period (e.g. daily).')})
+
+    return DX
