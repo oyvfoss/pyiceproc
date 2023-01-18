@@ -1,8 +1,8 @@
 TO DO
 ------
 
-Draft
-''''''
+Sea ice draft
+''''''''''''''
 
 - Function (*somewhere?*) to calculate **depth from pressure**
  - Subtract atmo pressure from ocean pressure (option to have a fixed correction
@@ -71,8 +71,17 @@ Other functionality
 - Interpolation of ocean velocity onto fixed depth (do this at the ensemble stage, 
   cumbersome and not too useful to do it to SAMPLEs)
 
+Documentation
+''''''''''''''
+
+- Look over README.md.
+- Make working example in README.md
+- Make more detailed/realistic example (notebook) 
+- Look into sphinx automatic documentation from functions..
+
 Maybe
 '''''
 
 - Look into burst stuff
 - Time means etc
+- Packaging for install
