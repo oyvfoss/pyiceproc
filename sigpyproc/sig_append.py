@@ -25,7 +25,7 @@ import gsw
 from sigpyproc.sig_calc import mat_to_py_time
 from matplotlib.dates import date2num
 
-def add_to_sigdata(dx, data, time, name, attrs = None, time_mat = False):
+def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False):
     '''
     Adds a time series to the Signature dataset. Interpolates onto the "time"
     coordinate (one entry per ensemble).
@@ -36,7 +36,7 @@ def add_to_sigdata(dx, data, time, name, attrs = None, time_mat = False):
 
     Inputs
     ------
-    dx: xarray dataset with signature data. 
+    DX: xarray dataset with signature data. 
     data: Time series data
     time: Time grid of data (python epoch unless time_mat = True) 
     name: Name of the new variable (string) 
@@ -47,7 +47,7 @@ def add_to_sigdata(dx, data, time, name, attrs = None, time_mat = False):
 
     Outputs
     -------
-    dx: The xarray dataset including the new variable.
+    DX: The xarray dataset including the new variable.
 
     '''
 
@@ -58,12 +58,12 @@ def add_to_sigdata(dx, data, time, name, attrs = None, time_mat = False):
     data_ip = interp1d(time, data, bounds_error = False)
 
     # Add interpolated data to dx
-    dx[name] = (('TIME'), data_ip(dx.TIME.data), attrs)
+    DX[name] = (('TIME'), data_ip(DX.TIME.data), attrs)
 
-    return dx
+    return DX
 
 
-def append_ctd(dx, temp, sal, pres, CTDtime, instr_SN = None, instr_desc = None, 
+def append_ctd(DX, temp, sal, pres, CTDtime, instr_SN = None, instr_desc = None, 
                 time_mat = False, pressure_offset = 0):
     '''
     Read data from a moored CTD - used for sound speed corrections etc. 
@@ -89,33 +89,39 @@ def append_ctd(dx, temp, sal, pres, CTDtime, instr_SN = None, instr_desc = None,
         sound_speed_CTD variables.
     '''
 
-    SA = gsw.SA_from_SP(sal, pres, dx.lon, dx.lat)
+    SA = gsw.SA_from_SP(sal, pres, DX.lon.data, DX.lat.data)
     CT = gsw.CT_from_t(SA, temp, pres)
     ss = gsw.sound_speed(SA, CT, pres)
+    rho = gsw.rho(SA, CT, pres)
 
     attrs_all = {'Instrument description': instr_desc, 'Instrument SN':None,
             'note':'Calculated using the gsw module. Linearly'
             ' interpolated onto Sig500 time grid.'}
     
-    add_to_sigdata(dx, SA, CTDtime, 'SA_CTD', 
+    DX = add_to_sigdata(DX, SA, CTDtime, 'SA_CTD', 
                 attrs = {'long_name':'Absolute Salinity', 'units':'g kg-1',
                   **attrs_all},
                 time_mat = time_mat)
-    add_to_sigdata(dx, CT, CTDtime, 'CT_CTD', 
+    DX = add_to_sigdata(DX, CT, CTDtime, 'CT_CTD', 
                 attrs = {'long_name':'Conservative Temperature', 'units':'degC',
                     **attrs_all},
                 time_mat = time_mat)
-    add_to_sigdata(dx, CT, CTDtime, 'pres_CTD', 
+    DX = add_to_sigdata(DX, pres, CTDtime, 'pres_CTD', 
                 attrs = {'long_name':'Pressure (CTD measurements)', 
                     'units':'dbar', **attrs_all},
                 time_mat = time_mat)
-    add_to_sigdata(dx, ss, CTDtime, 'sound_speed_CTD', 
+    DX = add_to_sigdata(DX, ss, CTDtime, 'sound_speed_CTD', 
                 attrs = {'long_name':'Sound speed', 'units':'m s-1',
                     **attrs_all},
                 time_mat = time_mat)
+    DX = add_to_sigdata(DX, rho, CTDtime, 'rho_CTD', 
+                attrs = {'long_name':'Ocean water density (CTD measurements)', 'units':'kg m-3',
+                    **attrs_all},
+                time_mat = time_mat)
+    return DX
 
 
-def append_atm_pres(dx, slp, slptime, attrs = None, 
+def append_atm_pres(DX, slp, slptime, attrs = None, 
                     time_mat = False):
     '''
     Append sea level pressure from e.g. ERA-5. Note that the
@@ -127,7 +133,7 @@ def append_atm_pres(dx, slp, slptime, attrs = None,
     Inputs
     ------
 
-    dx: xarray dataset with signature data.
+    DX: xarray dataset with signature data.
     
     slp: Sea level atmospheric pressure [dbar].
     slptime: Time stamp of slp.
@@ -137,7 +143,7 @@ def append_atm_pres(dx, slp, slptime, attrs = None,
 
     Outputs
     -------
-    dx: The xarray dataset including the SLP variable.
+    DX: The xarray dataset including the SLP variable.
     '''
 
     # Modify the attribute dictionary (specified "units" and "long_name"
@@ -148,9 +154,11 @@ def append_atm_pres(dx, slp, slptime, attrs = None,
             attrs_all[nm] = attrs[nm]
 
     # Append to sig500 data
-    add_to_sigdata(dx, slp, slptime, 'SLP', 
+    DX = add_to_sigdata(DX, slp, slptime, 'p_atmo', 
                 attrs = attrs_all,
                 time_mat = time_mat)
+
+    return DX
 
 
 def append_magdec(dx, magdec, magdectime = False, attrs = None, 
@@ -216,11 +224,11 @@ def set_lat(dx, lat):
     return dx
 
 
-def set_lon(dx, lat):
+def set_lon(dx, lon):
     '''
     Append latitude (degrees north, single value) to the dataset.
     '''
-    dx['lon'] = ((), lat, {'long_name':'Longitude', 'units':'degrees_east'})
+    dx['lon'] = ((), lon, {'long_name':'Longitude', 'units':'degrees_east'})
     return dx
 
 

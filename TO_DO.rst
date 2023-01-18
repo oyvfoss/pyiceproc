@@ -4,14 +4,8 @@ TO DO
 Sea ice draft
 ''''''''''''''
 
-- Function to calculate draft from depth/sound speed/tilt/altimeter dist/ow ss correction
-  - Return data, not an updated array (need to do this recursively for OW correction..) 
-  - Call the raw data (*surface_position* or something (not *draft*))
-  - Select only the *is_ice* portion :math:`\rightarrow` this is the draft  
-     - Need to think about this! Do we actually only want draft measurements from full (100% SIC)
-       ensembles? (I *think* we want to only use all-4-beam FOM samples - then do ensemble statistics 
-       that dont include not-ice samples). Then out draft **only contains measurements from times where we
-       are sure that we are measuring sea ice** - this seems like the right way to go.  
+- Basic functionality for draft seems to work well now! 
+    - (Need to clean up and double check things etc, though. Maybe reconsider some naming practices..)
 
   - Function for cleaning draft data (crazy outliers, etc) - do this before ensemble averaging.
    - Include rejection based on quality criterion!

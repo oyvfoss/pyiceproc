@@ -71,10 +71,11 @@ def dep_from_p(DX):
         'note':'Calculated using gsw.grav() for p=0 and lat=%.2f'%DX.lat}) 
     note_str += '\n- Using g=%.4f ms-2 (calculated using gsw.grav())'%g
 
+
     # CALCULATE OCEAN WATER DENSITY
-    if hasattr(DX, 'rho_ocean'):
-        rho_ocean = DX.rho_ocean.data
-        note_str += '\n- Using ocean density from the *rho_ocean* field.'
+    if hasattr(DX, 'rho_CTD'):
+        rho_ocean = DX.rho_CTD.data
+        note_str += '\n- Using ocean density from the *rho_CTD* field.'
     else:
         print('\nNo density (*rho_ocean*) field found. ')
         user_input_abort_dense = input('Enter "A" (Abort) or "C" '
@@ -95,7 +96,7 @@ def dep_from_p(DX):
 
     # CALCULATE DEPTH
     # Factor 1e4 is conversion db -> Pa
-    depth = 1e4*p_ocean/g/rho_ocean
+    depth = 1e4*p_ocean/g/rho_ocean[:, np.newaxis]
     DX['depth'] = (('TIME', 'SAMPLE'), depth, {'units':'m', 
         'long_name':'Transducer depth', 'note':note_str}) 
 
