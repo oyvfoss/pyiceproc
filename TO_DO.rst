@@ -4,14 +4,6 @@ TO DO
 Sea ice draft
 ''''''''''''''
 
-- Function (*somewhere?*) to calculate **depth from pressure**
- - Subtract atmo pressure from ocean pressure (option to have a fixed correction
-   set default to the predefined parameter in the@ sig500 data )
- - Hydrostatic approximation
-  - Take density into account if available (?) 
-  - GSW lat-dependence seems a bit too coarse.. But should look into 
-    what the difference actually is!
-
 - Function to calculate draft from depth/sound speed/tilt/altimeter dist/ow ss correction
   - Return data, not an updated array (need to do this recursively for OW correction..) 
   - Call the raw data (*surface_position* or something (not *draft*))

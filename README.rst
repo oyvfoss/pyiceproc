@@ -107,17 +107,30 @@ dictionary**
 - Individual ensembles are retained only if they pass various quality tests and
   tests of internal consistency.
 
-**Depth interpolation** - Interpolation fixed-depth.
 
-**Analysis and visualization** - Pr
+**Chopping of time points and depth bins** 
 
-**Export** - Functionality to export to smaller "analysis" xarray Dataset where
-unused
-  variables are removed.
-- Functionality to export to netCDF file (.nc). 
+- Easy chopping of depth ADCP bins or simgle time entries.
 
-  *NOTE:* The resulting file *should* be formatted according to CF conventions.
-  Do check your dataset closely before publication, however.
+**Depth interpolation** 
+
+- Interpolation fixed-depth.
+
+**Analysis and visualization** 
+
+- Print basic statistics of the dataset.
+- Some very basic plots.
+
+(Not intended to contain advanced analysis tools - just what is necessary during processing)
+
+**Export** 
+
+- Functionality to export to smaller "analysis" xarray Dataset where
+  unused variables are removed.
+- Functionality to export to netCDF file (.nc).
+   
+  - *NOTE:* The resulting file *should* be formatted according to CF conventions.
+    Do check your dataset closely before publication, however.
 
 ****
 
@@ -126,7 +139,7 @@ unused
 Modules
 '''''''''''''''''''
 
-´´sig_funcs.py´´
+**sig_funcs.py**
 
 Functions for loading one or several *.mat* files from a deployment. Reads to
 desired format, reshapes to the desired (TIME, SAMPLE) 2d shape, adds some
@@ -136,7 +149,7 @@ Function for calculating tilt from pitch and roll.
 
 Function for estimating ice presence/concentration. 
 
-´´sig_append_external.py´´
+**sig_append_external.py**
 
 Functions to append external datasets to an xarray Dataset containing Nortek
 Signature data. 
@@ -155,7 +168,7 @@ Dependencies
 -------------
 
 *Signature_PyProc* is a Python package, and requires Python 3 (will not work on
-1. and has currently only been tested on 3.8).
+2, and has currently only been tested on 3.8).
 
 **Standard libraries:**
 

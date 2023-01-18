@@ -22,7 +22,7 @@ import numpy as np
 import xarray as xr
 from scipy.interpolate import interp1d
 import gsw
-from sigpyproc.sig_funcs import mat_to_py_time
+from sigpyproc.sig_calc import mat_to_py_time
 from matplotlib.dates import date2num
 
 def add_to_sigdata(dx, data, time, name, attrs = None, time_mat = False):
@@ -206,6 +206,163 @@ def append_magdec(dx, magdec, magdectime = False, attrs = None,
         dx['magdec'] = ((), magdec, attrs_all)
 
     return dx
+
+
+def set_lat(dx, lat):
+    '''
+    Append latitude (degrees north, single value) to the dataset.
+    '''
+    dx['lat'] = ((), lat, {'long_name':'Latitude', 'units':'degrees_north'})
+    return dx
+
+
+def set_lon(dx, lat):
+    '''
+    Append latitude (degrees north, single value) to the dataset.
+    '''
+    dx['lon'] = ((), lat, {'long_name':'Longitude', 'units':'degrees_east'})
+    return dx
+
+
+
+##############################################################################
+
+def _add_tilt(DX):
+    '''
+    Calculate tilt from pitch/roll components. See Mantovanelli et al 2014 and
+    Woodgate et al 2011.
+
+    Input: xarray dataset with pitch and roll fields as read by
+    matfiles_to_dataset
+            
+    '''
+
+    tilt_attrs = {
+        'units':'degrees', 
+        'desc': ('Tilt calculated from pitch+roll'),
+        'note':('Calculated using the function sig_funcs._add_tilt(). '
+            'See Mantovanelli et al 2014 and Woodgate et al 2011.'),}
+
+    try:
+        DX['tilt_Average'] = (('time_average'), 
+            180 / np.pi* np.arccos(np.sqrt(
+            1 - np.sin(DX.Average_Pitch.data/180*np.pi) ** 2
+            - np.sin(DX.Average_Roll.data/180*np.pi) ** 2)))
+        DX['tilt_Average'].attrs  =  tilt_attrs
+    except:
+        pass
+
+    try:
+        DX['tilt_AverageIce'] = (('time_average'), 
+            180 / np.pi* np.arccos(np.sqrt(
+            1 - np.sin(DX.AverageIce_Pitch.data/180*np.pi) ** 2
+            - np.sin(DX.AverageIce_Roll.data/180*np.pi) ** 2)))
+        DX['tilt_AverageIce'].attrs  = tilt_attrs
+    except:
+        pass
+
+    return DX
+
+
+##############################################################################
+
+def _add_SIC_FOM(DX, FOMthr = None):
+    '''
+    Add estimates of sea ice presence in each sample, and sea ice 
+    concentration in each ensemble, from the Figure-of-Merit (FOM) 
+    metric reported by the four slanted beam in the AverageIce data.
+
+    - Conservative estimate (no suffix): FOM<FOM_thr for ALL beams  
+    - Alternative estimate ('_ALT'): FOM<FOM_thr for ANY OF FOUR beams 
+
+    The former seems to give a better estimate of sea ice concentration.
+
+    Using the "FOM_threshold" variable in the dataset unless otherwise 
+    specified.
+
+    The sea ice concentration variables "SIC_FOM", "SIC_FOM_ALT" 
+    (percent) are typically most useful whean veraging over a longer 
+    time period (e.g. daily).
+
+    Inputs:
+    ------
+    DX: xarray Dataset containing the data.
+    FOMthr: Figure-of-Merit threshold 
+            (using "FOM_threshold" specified in DX unless otherwise
+            specified)
+
+    Outputs:
+    --------
+    DX: xarray Dataset containing the data, with added fields:
+    - ICE_IN_SAMPLE - Ice presence per sample (conservative)
+    - ICE_IN_SAMPLE_ALT - Ice presence per sample (alternative)
+    - SIC_FOM - Estimated sea ice concentration per ensemble (conservative)
+    - SIC_FOM_ALT - Estimated sea ice concentration per ensemble 
+                     (alternative)
+    '''
+    # FOM threshold for ice vs ocean     
+    if FOMthr==None:
+        FOMthr = float(DX.FOM_threshold)
+
+
+    # Find ensemble indices where we have ice
+    ALL_ICE_IN_SAMPLE = np.bool_(np.ones([DX.dims['TIME'], 
+                             DX.dims['SAMPLE']]))
+
+    ALL_WATER_IN_SAMPLE = np.bool_(np.ones([DX.dims['TIME'], 
+                             DX.dims['SAMPLE']]))
+
+    for nn in np.arange(1, 5):
+        FOMnm = 'AverageIce_FOMBeam%i'%nn
+        
+        # False if FOM<thr (IS ICE) for ANY beam
+        ALL_WATER_IN_SAMPLE *= DX[FOMnm].data > FOMthr 
+        
+        # False if FOM>thr (IS WATER) for ANY beam
+        ALL_ICE_IN_SAMPLE *= DX[FOMnm].data < FOMthr
+
+    ANY_ICE_IN_SAMPLE = ~ALL_WATER_IN_SAMPLE
+
+    DX['ICE_IN_SAMPLE'] = (('TIME', 'SAMPLE'), ALL_ICE_IN_SAMPLE,
+        {'long_name':('Identification of sea ice in sample'
+                     ' (conservative estimate)'), 
+         'desc':'Binary classification (ice/not ice), where "ice" '
+         'is when FOM < %.0f in ALL of the 4 slanted beams.'%FOMthr})
+
+
+    DX['ICE_IN_SAMPLE_ANY'] = (('TIME', 'SAMPLE'), ANY_ICE_IN_SAMPLE,
+        {'long_name':('Identification of sea ice in sample'),
+         'desc':'Binary classification (ice/not ice), where "ice" is when '
+         'FOM < %.0f in ONE OR MORE of the 4 slanted beams.'%FOMthr})
+
+    SIC = ALL_ICE_IN_SAMPLE.mean(axis = 1)*100
+
+    DX['SIC_FOM'] = (('TIME'), SIC, {'long_name':'Sea ice concentration',
+        'desc':('"Sea ice concentration" in each '
+        'ensemble based on FOM criterion. '
+        'Calculated as the fraction of '
+        'samples per ensemble where FOM is below %.0f for ALL '
+        'of the four slanted beams.')%FOMthr, 
+        'units':'%',
+        'note':('Typically most useful when averaged over a longer '
+        'period (e.g. daily)')})
+
+    SIC_ALT = ANY_ICE_IN_SAMPLE.mean(axis = 1)*100
+
+    DX['SIC_FOM_ALT'] = (('TIME'), SIC_ALT, 
+        {'long_name':'Sea ice concentration (alternative)',
+        'desc':('"Sea ice concentration" in each '
+        'ensemble based on FOM criterion. '
+        'Calculated as the fraction of '
+        'samples per ensemble where FOM is below %.0f for ALT LEAST ONE '
+        'of the four slanted beams.')%FOMthr, 
+        'units':'%',
+        'note':('*SIC_FOM_ALT* seems a bit "trigger happy" - recommended'
+                ' to use the more conservative *SIC_FOM*.\nTypically most'
+                ' useful when averaged over a longer period (e.g. daily).')})
+
+    return DX
+
 
 
 # ERA-5 retrieval deprecated for now (decided for now that this is best suited elsewhere as users may 
