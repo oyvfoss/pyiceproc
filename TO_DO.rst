@@ -5,20 +5,21 @@ Sea ice draft
 ''''''''''''''
 
 - Basic functionality for draft seems to work well now! 
-    - (Need to clean up and double check things etc, though. Maybe reconsider some naming practices..)
+    - (Need to clean up and double check things etc, though. Maybe reconsider some naming practices..).
 
-  - Function for cleaning draft data (crazy outliers, etc) - do this before ensemble averaging.
-   - Include rejection based on quality criterion!
+- Function for cleaning draft data (crazy outliers, etc) - do this before ensemble averaging.
+    - Include rejection based on quality criterion!
 
-  - Assign the resulting distance and surface position to the dataset (maybe as ``DRAFT_INITIAL`` or similar?)
+- Assign the resulting distance and surface position to the dataset (maybe as ``DRAFT_INITIAL`` or similar?)
     - Want to run OW script below and recompute
 
 - Function to compute a long-term OW mean (to be used for OW correction)
-  - Want to use ``scipy.uniform_filter1d`` or similar for running stats (avoid the more uncommon 
-    libraries I normally use..) 
-  - Need visualization/evaluation and relatively easy customization.
-    - Tink of which parameter is useful here :math:`\rightarrow` Window size of runnig mean?    
-  - Export the appropriate correction factor..
+    - Want to use ``scipy.uniform_filter1d`` or similar for running stats (avoid the more uncommon libraries I normally use..) 
+    - Need visualization/evaluation and relatively easy customization.
+
+          - Think of which parameter is useful here :math:`\rightarrow` Window size of running mean?  
+   
+    - Export the appropriate correction factor..
 
 - Wrapper function to apply OW correction! (resulting in "DRAFT", "distance" fields..)
 
@@ -37,8 +38,8 @@ Ocean velocity
   - I don't think it's worth doing sound speed/density corrections to bin depths/velocity magnitude.
  
 - Mask by sidelobe interference and above water measurements.
- - Account for ice draft here! (Probably the easiest approach.) 
- - Reject bins with nothing (<0.1%) in them.
+     - Account for ice draft here! (Probably the easiest approach.) 
+     - Reject bins with nothing (<0.1%) in them.
   
 - Mask SAMPLES based on the normal, successive threshold criteria
 - Ensemble statistics (median?) - rejecting invalid ensembles.
