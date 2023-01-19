@@ -1,9 +1,10 @@
-Signature_PyProc
-################
+# Signature_PyProc
+ 
 
-![Alt text](misc/sig_illustration.png)
+![](misc/sig_illustration.png)
 
 Version 0.0.1: *Under development.* 
+______
 
 Overview
 --------
@@ -13,37 +14,40 @@ ADCPs.
 
 Designed for applications where the instrument is deployed looking upward below
 the ocean surface.
+______
 
-  **GOAL:**
+  ### **GOAL:**
    
-  **Easy and explicit post-processing to obtain scientific-quality estimates of**
-    - *Sea ice draft* 
-    - *Sea ice drift velocity*
-    - *Upper ocean current velocity*
- 
+  **Easy and explicit post-processing to obtain scientific-quality estimates of:**
+
+  - **Sea ice draft**
+  - **Sea ice drift velocity**
+  - **Upper ocean current velocity**
+______
+
 
 Inputs to the process are: 
 
-- *.mat* files exported by Norteks `SignatureDeployment
-  <https://www.nortekgroup.com/software>`_ software *(required)* 
+- *.mat* files exported by Norteks [SignatureDeployment](https://www.nortekgroup.com/software) software *(required)* 
 - Time series of atmospheric pressure during the deployment *(strongly
   recommended)* 
 - Time series of ocean temperature/salinity in the upper ocean *(recommended)* 
 - Magnetic declination correction (single value or time series) *(necessary for
   correct velocity directions)* 
+______
+
 
 Core functionality
-'''''''''''''''''''
+------------------
 
 **Read one or multiple (** *.mat* **) data files and transform to Python
 dictionary**
 
-- Reads and concatenates data from *.mat*-files produced using Nortek's
-  `SignatureDeployment <https://www.nortekgroup.com/software>`_ software from
+- Reads and concatenates data from *.mat*-files produced using Nortek's [SignatureDeployment](https://www.nortekgroup.com/software)
+software from
   *.ad2cp* data files output by the instrument. 
   
-- Stores the data in an `xarray Dataset
-  <https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html>`_.
+- Stores the data in an [xarray Dataset](https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html).
 
 - Present version does not read *Burst* or *Waves* data - only *Average*
   (altimeter, ocean velocities) and *AverageIce* (ice velocities).
@@ -134,12 +138,11 @@ dictionary**
   - *NOTE:* The resulting file *should* be formatted according to CF conventions.
     Do check your dataset closely before publication, however.
 
-****
-
+______
 
 
 Modules
-'''''''''''''''''''
+-------
 
 **sig_funcs.py**
 
@@ -151,7 +154,7 @@ Function for calculating tilt from pitch and roll.
 
 Function for estimating ice presence/concentration. 
 
-**sig_append_external.py**
+**sig_append.py**
 
 Functions to append external datasets to an xarray Dataset containing Nortek
 Signature data. 
@@ -165,6 +168,11 @@ formatted correctly in later operations:
 - Add air pressure (for instrument depth corrections)
 - Add magnetic declination (for correction of velocity directions)
 
+**sig_calc.py**
+
+**sig_draft.py**
+
+______________
 
 Dependencies
 -------------
@@ -180,18 +188,20 @@ Dependencies
 
 **Other:**
 
-- `xarray <https://docs.xarray.dev/en/stable/>`_ - data are stored and
+-  [xarray](https://docs.xarray.dev/en/stable/) - data are stored and
   manipulated as xarray *Dataset* objects.
 - `GSW-Python <https://teos-10.github.io/GSW-Python/>`_ - used for computation
   of depth from pressure as well as density/sound speed/etc from CTD
   measurements.
  
 
+______________
 
 Basic example
 -------------
 
 TBW
+______________
 
 Version history
 '''''''''''''''''''
