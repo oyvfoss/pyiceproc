@@ -1,6 +1,3 @@
-# Signature_PyProc
- 
-
 ![](misc/sig_illustration.png)
 
 Version 0.0.1: *Under development.* 
