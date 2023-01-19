@@ -1,6 +1,8 @@
 Signature_PyProc
 ################
 
+![Alt text](misc/sig_illustration.png)
+
 Version 0.0.1: *Under development.* 
 
 Overview
