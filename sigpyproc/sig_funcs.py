@@ -271,10 +271,10 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
 
     if include_raw_altimeter:
         try: # If we have AverageRawAltimeter: Add this as well  
-            coords += {'beams':np.arange(
+            coords.update({'beams':np.arange(
                 len(b['AverageRawAltimeter_BeamToChannelMapping'])),
                 'along_altimeter':np.arange(
-                    b['AverageRawAltimeter_AmpBeam5'].shape[1])}
+                    b['AverageRawAltimeter_AmpBeam5'].shape[1])})
         except:
             print('No *AverageRawAltimeter*')
 
@@ -327,7 +327,7 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
                 if b[key].ndim==0:
                     dx[key] = ((), b[key])
                     
-                elif b[dxkey].ndim==1:
+                elif b[key].ndim==1:
                     if len(b[key]) == dx.dims['beams']:
                         dx[key] = (('beams'), b[key])
                     else:
