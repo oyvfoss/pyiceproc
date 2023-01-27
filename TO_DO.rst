@@ -4,24 +4,20 @@ TO DO
 Sea ice draft
 ''''''''''''''
 
-- Basic functionality for draft seems to work well now! 
-    - (Need to clean up and double check things etc, though. Maybe reconsider some naming practices..).
+- Basic functionality for draft seems to work well now! OW correction also seems ok! 
+    - (Need to clean up and double check things etc, though. Maybe reconsider
+      some naming practices..).
 
-- Function for cleaning draft data (crazy outliers, etc) - do this before ensemble averaging.
-    - Include rejection based on quality criterion!
+- Need to clarify LE vs AST. Questions for Nortek:
+  - Why would there be an open-water difference?
+  - Is a ~1% correction typical? 
 
-- Assign the resulting distance and surface position to the dataset (maybe as ``DRAFT_INITIAL`` or similar?)
-    - Want to run OW script below and recompute
+- Function for cleaning draft data (crazy outliers, etc) - do this before
+  ensemble averaging.
+    - Include rejection based on quality criterion! (**X**)
+       - May still want to do some other statistics? 
 
-- Function to compute a long-term OW mean (to be used for OW correction)
-    - Want to use ``scipy.uniform_filter1d`` or similar for running stats (avoid the more uncommon libraries I normally use..) 
-    - Need visualization/evaluation and relatively easy customization.
 
-          - Think of which parameter is useful here :math:`\rightarrow` Window size of running mean?  
-   
-    - Export the appropriate correction factor..
-
-- Wrapper function to apply OW correction! (resulting in "DRAFT", "distance" fields..)
 
 Ice velocity
 ''''''''''''
