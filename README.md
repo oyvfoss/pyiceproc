@@ -49,12 +49,12 @@ software from
 - Present version does not read *Burst* or *Waves* data - only *Average*
   (altimeter, ocean velocities) and *AverageIce* (ice velocities).
 
-- The single *Average_Time* dimension is reshaped to two dimensions (*TIME*:
-  time stamp of each ensemble, and *SAMPLE*: number of sample in ensemble). 
+- The single ``Average_Time`` dimension is reshaped to two dimensions (``TIME``:
+  time stamp of each ensemble, and ``SAMPLE``: number of sample in ensemble). 
 
   - This is useful because the instrument usually samples in ensembles, e.g.
-    collects 50 samples at 1 Hz once every 20 minutes. We tyopically want to do
-    statistics on each ensembles to arrive at one value per *TIME*.      
+    collects 50 samples at 1 Hz once every 20 minutes. We typically want to do
+    statistics on each ensembles to arrive at one value per ``TIME``.      
 
 
 **Estimate sea ice presence based on the** *Figure-of-Merit* **metric**
@@ -71,7 +71,7 @@ software from
   (*NOTE: This "sea ice concentration" is most meaningful when averaged over a
   longer time period, e.g. daily.*)
 
-- Alternative estimates of sea ice presence/concentration (suffix *_FOM*) are
+- Alternative estimates of sea ice presence/concentration (suffix ``_FOM``) are
   made by a less conservative criterion: requiring that FOM of *at least one* of
   four beams is below the threshold. These are not recommended as they tend to
   give false positives for ice.
@@ -81,7 +81,7 @@ software from
 
 - Take for example a record of ocean temperature from another instrument, or sea
   ice concentration from remote sensing product, and add it to the sig500
-  dataset interpolated onto the native *TIME* grid. This is useful for adding CTD
+  dataset interpolated onto the ``TIME`` grid. This is useful for adding CTD
   variables (for sound speed corrections) or atmospheric pressure (for
   instrument depth correction), but can also be useful for analysis of sig500
   data in combination with e.g. remote sensing products. 
@@ -160,7 +160,7 @@ Modules
 
 (*Note*: Will look into the organization once all key functions are in place - may end up migrating functions or organizing things otherwise.)
 
-**sig_funcs.py**
+``sig_load.py``
 
 Functions for loading one or several *.mat* files from a deployment. Reads to
 desired format, reshapes to the desired (TIME, SAMPLE) 2d shape, adds some
@@ -170,7 +170,7 @@ Function for calculating tilt from pitch and roll.
 
 Function for estimating ice presence/concentration. 
 
-**sig_append.py**
+``sig_append.py``
 
 Functions to append external datasets to an xarray Dataset containing Nortek
 Signature data. 
@@ -184,7 +184,7 @@ formatted correctly in later operations:
 - Add air pressure (for instrument depth corrections)
 - Add magnetic declination (for correction of velocity directions)
 
-**sig_calc.py**
+``sig_calc.py``
 
 Various functions:
 
@@ -193,12 +193,12 @@ Various functions:
 - Functions for daily averaging and running statistics.
 
 
-**sig_draft.py**
+``sig_draft.py``
 
 - Calculate depth of the scattering surface based on altimeter distance, depth,
   and corrections for tilt, observed sound speed, and open water correction. 
    
-**sig_open_water_correction.py**
+``sig_open_water_correction.py``
 
 - Estimating the approximate observed mean depth of the surface in open water conditions (should ideally be 0). 
 - Calculate a sound speed correction to compensate for the observed offset from zero when recomputing draft.

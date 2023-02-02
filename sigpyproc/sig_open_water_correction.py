@@ -50,12 +50,16 @@ def get_LP_OWSD(OWSD, thr_reject_from_net_median = 0.15,
     # 2. Compute ensemble medians
     OWSD_med = OWSD_filt.median(dim = 'SAMPLE')
     
+    #fig, ax = plt.subplots(2, 1, sharex = True)
+    #ax[0].plot(OWSD.TIME, OWSD_med)
+
     # 3. Compute daily medians ()
     Ad, td = daily_median(OWSD_med, OWSD.TIME, min_frac = min_frac_daily, 
-                         axis = -1)
+                         axis = -1, )
     
     # 4. Interpolate to continuous function (daily)
-    Ad_interp = interp1d(td.data[~np.isnan(Ad)], Ad[~np.isnan(Ad)])(td.data)
+    Ad_interp = interp1d(td.data[~np.isnan(Ad)], Ad[~np.isnan(Ad)], 
+        bounds_error = False)(td.data)
 
     # 5. Smooth with running mean
     RS = runningstat(Ad_interp, run_window_days)
@@ -108,7 +112,7 @@ def get_Beta_from_OWSD(DX,
     return DX
 
 
-def compare_OW_correction(DX):
+def compare_OW_correction(DX, show_plots = True):
     '''
     Note: Run this *after* running *get_Beta_from_OWSD* but *before*
     running *sig_draft.calculate_draft()* again.
@@ -146,53 +150,53 @@ def compare_OW_correction(DX):
 
 
     # Figures
+    if show_plots:
+        fig, ax = plt.subplots(2, 1, sharex = True)
 
-    fig, ax = plt.subplots(2, 1, sharex = True)
+        ax[0].plot_date(DX2.TIME, DX.OW_surface_before_correction_LE, '-', label = 'LE')
+        ax[0].plot_date(DX2.TIME, DX.OW_surface_before_correction_AST, '-', label = 'AST')
 
-    ax[0].plot_date(DX2.TIME, DX.OW_surface_before_correction_LE, '-', label = 'LE')
-    ax[0].plot_date(DX2.TIME, DX.OW_surface_before_correction_AST, '-', label = 'AST')
+        ax[1].plot_date(DX2.TIME, DX.BETA_open_water_corr_LE, '-', label = 'LE')
+        ax[1].plot_date(DX2.TIME, DX.BETA_open_water_corr_AST, '-', label = 'AST')
 
-    ax[1].plot_date(DX2.TIME, DX.BETA_open_water_corr_LE, '-', label = 'LE')
-    ax[1].plot_date(DX2.TIME, DX.BETA_open_water_corr_AST, '-', label = 'AST')
+        for axn in ax: 
+            axn.legend()
+            axn.grid()
+        labfs = 9
+        ax[0].set_ylabel('Estimated open water\nsurface depth [m]', 
+            fontsize = labfs)
+        ax[1].set_ylabel('BETA (OWSD correction factor)', 
+            fontsize = labfs)
 
-    for axn in ax: 
-        axn.legend()
-        axn.grid()
-    labfs = 9
-    ax[0].set_ylabel('Estimated open water\nsurface depth [m]', 
-        fontsize = labfs)
-    ax[1].set_ylabel('BETA (OWSD correction factor)', 
-        fontsize = labfs)
+        fig, ax = plt.subplots(1, 2, sharex = True, sharey = True)
+        ax[0].scatter(DX0.time_average, DX0.SURFACE_DEPTH_LE, marker='.', 
+                        color = 'k', alpha = 0.05, s = 0.3, label = 'Uncorrected')
+        ax[0].scatter(DX.time_average, DX2.SURFACE_DEPTH_LE, marker='.', 
+                        color = 'r', alpha = 0.05, s = 0.3, label = 'Corrected')
 
-    fig, ax = plt.subplots(1, 2, sharex = True, sharey = True)
-    ax[0].scatter(DX0.time_average, DX0.SURFACE_DEPTH_LE, marker='.', 
-                    color = 'k', alpha = 0.05, s = 0.3, label = 'Uncorrected')
-    ax[0].scatter(DX.time_average, DX2.SURFACE_DEPTH_LE, marker='.', 
-                    color = 'r', alpha = 0.05, s = 0.3, label = 'Corrected')
+        ax[1].scatter(DX0.TIME, DX0.SEA_ICE_DRAFT_MEDIAN_LE, marker='.', 
+                        color = 'k', alpha = 0.05, s = 0.3, label = 'Uncorrected')
+        ax[1].scatter(DX.TIME, DX2.SEA_ICE_DRAFT_MEDIAN_LE, marker='.', 
+                        color = 'r', alpha = 0.05, s = 0.3, label = 'Corrected')
+        ax[0].set_title('LE Surface depth (ALL)')
+        ax[1].set_title('LE sea ice draft (ice only, ensemble averaged)')
 
-    ax[1].scatter(DX0.TIME, DX0.SEA_ICE_DRAFT_MEDIAN_LE, marker='.', 
-                    color = 'k', alpha = 0.05, s = 0.3, label = 'Uncorrected')
-    ax[1].scatter(DX.TIME, DX2.SEA_ICE_DRAFT_MEDIAN_LE, marker='.', 
-                    color = 'r', alpha = 0.05, s = 0.3, label = 'Corrected')
-    ax[0].set_title('Surface depth (ALL)')
-    ax[1].set_title('Sea ice draft (ice only, ensemble averaged)')
+        for axn in ax: 
+            axn.legend()
+            axn.grid()
+            axn.set_ylabel('[m]')
 
-    for axn in ax: 
-        axn.legend()
-        axn.grid()
-        axn.set_ylabel('[m]')
+        labfs = 9
+        ax[0].set_ylabel('Estimated open water\nsurface depth [m]', 
+            fontsize = labfs)
+        ax[1].set_ylabel('BETA (OWSD correction factor)', 
+            fontsize = labfs)
 
-    labfs = 9
-    ax[0].set_ylabel('Estimated open water\nsurface depth [m]', 
-        fontsize = labfs)
-    ax[1].set_ylabel('BETA (OWSD correction factor)', 
-        fontsize = labfs)
-
-    # Dummy for date axis..
-    ax[0].plot_date(DX.time_average[0, 0],DX2.SURFACE_DEPTH_LE[0, 0] )
-    
-    ax[0].invert_yaxis()
-    plt.show()
+        # Dummy for date axis..
+        ax[0].plot_date(DX.time_average[0, 0],DX2.SURFACE_DEPTH_LE[0, 0] )
+        
+        ax[0].invert_yaxis()
+        plt.show()
 
 if False:
     OWSD_LP_LE, td = get_long_term_OWdist(OWDEP_LE, )

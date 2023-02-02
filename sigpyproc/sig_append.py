@@ -23,7 +23,7 @@ import xarray as xr
 from scipy.interpolate import interp1d
 import gsw
 from sigpyproc.sig_calc import mat_to_py_time
-from matplotlib.dates import date2num
+from matplotlib.dates import date2num, num2date
 
 def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False):
     '''
@@ -53,6 +53,24 @@ def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False):
 
     if time_mat:
         time = mat_to_py_time(time)
+
+    tfmt = '%d %b %Y'
+    tstrs_DX = (num2date(DX.TIME[0]).strftime(tfmt),
+                num2date(DX.TIME[-1]).strftime(tfmt))
+    tstrs_input = (num2date(time[0]).strftime(tfmt), 
+                   num2date(time[-1]).strftime(tfmt))
+
+    if False: #TEMPORARY - CHECK!
+        assert (np.floor(time[0])>np.floor(DX.TIME[-1]) or np.floor(
+                time[-1])<np.floor(DX.TIME[0])), (
+            'Time range of input (%s-%s)'%tstrs_input +
+            'Is outside the span of TIME (%s-%s).'%tstrs_DX)
+
+        if (time[0]>DX.TIME[0] or time[-1]<DX.TIME[-1]):
+            raise Warning('Warning: '+
+            'Time range of input (%s-%s)'%tstrs_input +
+            'does not cover the full span of TIME (%s-%s).'%tstrs_DX + 
+            'Will result in NaNs!')
 
     # Interpolatant of the time series
     data_ip = interp1d(time, data, bounds_error = False)

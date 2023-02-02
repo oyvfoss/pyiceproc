@@ -37,13 +37,17 @@ def calculate_draft(DX, corr_sound_speed_CTD = True, qual_thr = 8000):
             'units':'m', 'note':DX['SURFACE_DEPTH_%s'%le_ast].note + 
                 '\n\nSet to NaN where ICE_IN_SAMPLE==False'})
 
+        DX['SEA_ICE_DRAFT_%s'%le_ast] = DX['SEA_ICE_DRAFT_%s'%le_ast].where(
+                    DX['SEA_ICE_DRAFT_%s'%le_ast]>-0.3)
+
         DX['SEA_ICE_DRAFT_MEDIAN_%s'%le_ast] = (('TIME'), 
             np.nanmedian(si_draft_, axis=1),  {'long_name':
             'Median sea ice draft of each ensemble (%s)'%le_ast, 'units':'m', 
             'note':DX['SURFACE_DEPTH_%s'%le_ast].note + 
                 '\n\nOnly counting instances with sea ice presence.'})
 
-
+        DX['SEA_ICE_DRAFT_MEDIAN_%s'%le_ast] = DX['SEA_ICE_DRAFT_MEDIAN_%s'%le_ast].where(
+                    DX['SEA_ICE_DRAFT_MEDIAN_%s'%le_ast]>-0.3)
 
     return DX
 
