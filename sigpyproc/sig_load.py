@@ -22,8 +22,11 @@ import numpy as np
 from scipy.io import loadmat
 import xarray as xr
 from matplotlib.dates import num2date 
+import matplotlib.pyplot as plt 
+from IPython.display import display
 from sigpyproc.sig_calc import mat_to_py_time
 from sigpyproc.sig_append import _add_tilt, _add_SIC_FOM, set_lat, set_lon
+from datetime import datetime
 
 ##############################################################################
 
@@ -100,7 +103,7 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
 
     # Reshape
     if reshape:
-        DX = reshape_ensembles(DX)
+        DX = _reshape_ensembles(DX)
 
     # Add some attributes
     DX = set_lat(DX, lat)
@@ -116,9 +119,84 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
     # Add sea ice concetration estimate from FOM
     DX = _add_SIC_FOM(DX)
 
+    # Add history attribute
+    DX.attrs['history'] = ('- Loaded from .mat files on' 
+        + ' %s'%datetime.now().strftime("%d %b %Y."))
+
     print('Done. Run sig_funcs.overview() to print some additional details.')
 
+
     return DX
+
+##############################################################################
+
+def chop(DX, indices = None, auto_accept = False):
+    '''
+    Chop a DX array with signature data (across all time-varying variables).
+
+    Can specify the index or go with a simple pressure-based algorithm 
+    (first/last indices within 3 SDs of the pressure median)
+
+    DX: xarray Dataset containing signature data.
+    indices: Tuple of indexes (start, stop), where start, stop are integers.
+    auto_accept: Automatically accept chop suggested based on pressure record. 
+    '''
+
+    if not indices:
+        p = DX.Average_AltimeterPressure.mean(dim = 'SAMPLE').data
+        p_mean = np.ma.median(p)
+        p_sd = np.ma.std(p)
+
+        indices = [None, None]
+
+        if p[0]<p_mean-3*p_sd:
+            indices[0] = np.where(np.diff(p<p_mean-3*p_sd))[0][0]+1
+        if p[-1]<p_mean-3*p_sd:
+            indices[1] = np.where(np.diff(p<p_mean-3*p_sd))[0][-1]
+
+        keep_slice = slice(*indices)
+        if auto_accept:
+            accept = 'y'
+        else:
+            fig, ax  = plt.subplots(figsize = (8, 4))
+            index = np.arange(len(p))
+            ax.plot(index, p, 'k')
+            ax.plot(index[keep_slice], p[keep_slice], 'r')
+            ax.set_xlabel('Index')
+            ax.set_ylabel('Pressure [db]')
+            ax.invert_yaxis()
+            ax.set_title('Suggested chop: %s (to red curve).'%indices
+                +' Close this window to continue..')
+            plt.show(block=True)
+            print('Suggested chop: %s (to red curve)'%indices)
+            accept = input('Accept (y/n)?: ')
+
+        if accept=='n':
+            print('Not accepted -> Not chopping anything now.')
+            print('NOTE: run sig_load.chop(DX, indices =[A, B]) to'
+                ' manually set chop.')
+            return DX
+        elif accept=='y':
+            pass
+        else:
+            raise Exception('I do not understand your input "%s".'%accept 
+                + ' Only "y" or "n" works. -> Exiting.')
+    else:
+        keep_slice = slice(indices[0], indices[1]+1)
+
+    L0 = DX.dims['TIME']
+    print('Chopping to index %s'%indices)
+    DX = DX.isel(TIME = keep_slice)
+    L1 = DX.dims['TIME']
+    net_str = 'Chopped %i ensembles using -> %s (total ensembles %i -> %i)'%(
+            L0-L1, indices, L0, L1)
+    print(net_str)
+        
+
+    DX.attrs['history'] += '\n- %s'%net_str
+    return DX
+
+
 
 ##############################################################################
 
@@ -155,7 +233,7 @@ def overview(DX):
 
 ##############################################################################
 
-def reshape_ensembles(DX):
+def _reshape_ensembles(DX):
     '''
     Reshape all time series from a single 'time_average'
     dimension to 2D ('TIME', 'SAMPLE') where we TIME is the 
@@ -293,7 +371,7 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
     # as fields with the appropriate dimensions.
 
     for key in b.keys():
-        print('%s: %s..\r'%(filename[-10:], key), end = '') 
+        #print('%s: %s..\r'%(filename[-10:], key), end = '') 
         
         # AverageIce fields
         if 'AverageIce_' in key:
@@ -431,26 +509,6 @@ def _sig_mat_to_dict(matfn, include_metadata = True, squeeze_identical = True,
     # Return the dictionary
     return d
 
-##############################################################################
-
-if False: # DEPRECATED - NOW DOING THIS IN XARRAY?
-    def sig_mat_to_dict_join(flist, **kwargs):
-        '''
-        E.g. skip_AverageIce = True
-        '''
-        D = sig_mat_to_dict(flist[0], include_metadata = True, 
-                            **kwargs)
-        sn0 = D['conf']['SerialNo']
-        for nn, fn in enumerate(flist[1:]):
-            print('Reading file %i/%i..\r'%(nn+1, len(flist)-1), end = '')
-            d_ = sig_mat_to_dict(fn, include_metadata = True, 
-                            **kwargs)
-
-            if d['conf']['SerialNo'] != sn0:
-                raise Exception('Instrument serial number changed. Should '
-                    'only join files that are part of the same deployment!')
-
-        d['conf']['SerialNo']
 
 ##############################################################################
 
