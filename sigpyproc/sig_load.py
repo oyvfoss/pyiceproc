@@ -78,8 +78,7 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
             dx0 = dx.copy()
             first = False
         else:
-            print('%s: CONCATENATING (print: first = %s)..\r'%(
-                filename[-10:], first), end = '') 
+            print('CONCATENATING: FILE "..%s"..\r'%(filename[-15:]), end = '') 
             try:
                 DX = xr.concat([DX, dx], dim = 'time_average')
             except:

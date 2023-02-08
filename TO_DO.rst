@@ -17,7 +17,7 @@ Sea ice draft
     - Include rejection based on quality criterion! (**X**)
        - May still want to do some other statistics? 
 
-
+t
 
 Ice velocity
 ''''''''''''
