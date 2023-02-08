@@ -82,6 +82,87 @@ def plot_ellipse_icevel(DX, lp_days = 5, ax = None,
 
 
 
+def histogram(DX, varnm, hrange = None, nbins = 50, 
+        return_figure = False):
+    '''
+    Histogram showing the distribution of a variable - 1D or 2D.
+
+    DXX xarray object with signature data 
+    varnm: Name of the variable in DX
+    hrange: Max range for the histogram
+    nbins: Number of histogram bins
+    return_figure: True for returning the figrue object. 
+    '''
+    fig = plt.figure(figsize = (8, 8))
+    ax = plt.subplot2grid((2, 5), (0, 0), colspan =5)
+    textax = plt.subplot2grid((2, 5), (1, 0), colspan =3)
+
+    VAR_all = DX[varnm].data[~np.isnan(DX[varnm].data)]
+
+    N_all = len(VAR_all)
+    col_1 = (1.0, 0.498, 0.055)
+    col_2 = (0.122, 0.467, 0.705)
+
+    # Histogram, all entries
+    Hargs = {'density': False, 'range':hrange, 'bins':nbins}
+    H_all, H_bins = np.histogram(VAR_all, **Hargs)
+    Hargs['bins']= H_bins
+    H_width = np.ma.median(np.diff(H_bins))
+
+    # Bar plot
+    ax.bar(H_bins[:-1], 100*H_all/N_all, width = H_width, align = 'edge', 
+            alpha = 0.4, color = col_1, label = 'All')
+
+    # Cumulative plot
+    cumulative = np.concatenate([[0], np.cumsum(100*H_all/N_all)])
+    twax = ax.twinx()
+    twax.plot(H_bins, cumulative, 'k', clip_on = False)
+    twax.set_ylim(0, 105)
+
+    # Axis labels
+
+    # x label: Long description
+    ax.set_ylabel('Density per bin [%]')
+    twax.set_ylabel('Cumulative density [%]')
+    if 'units' in DX[varnm].attrs.keys():
+        unit = DX[varnm].attrs['units']
+    else:
+        unit = ''
+        
+    ax.set_xlabel(unit)
+
+    attrtext = 'ATTRIBUTES\n------------------\n'
+    attrtext += 'DIMENSIONS: %s'%str(DX[varnm].dims)
+    for attrnm in DX[varnm].attrs.keys():
+        #if len(DX[varnm].attrs[attrnm])>60:
+         #   note DX.tilt_Average.attrs['note'][:60]
+        attrtext+='\n%s: %s'%(attrnm.upper(), DX[varnm].attrs[attrnm])
+
+    stattext = '\n\nQUICK STATS\n------------------'
+    stattext+='\nTOTAL NUMBER NON-NaN VALUES: %.0f '%(len(VAR_all))
+    stattext+='\nMEAN: %.2f %s'%(VAR_all.mean(), unit)
+    stattext+='\nMEDIAN: %.2f %s'%(np.median(VAR_all), unit)
+    stattext+='\nMIN: %.2f %s'%(np.min(VAR_all), unit)
+    stattext+='\nMAX: %.2f %s'%(np.max(VAR_all), unit)
+    stattext+='\nSD: %.2f %s'%(np.std(VAR_all), unit)
+
+    textax.text(0.01, 0.9, attrtext + stattext, va = 'top',
+                transform=textax.transAxes, fontsize=10, wrap = True)
+
+    ax.set_title('%s'%varnm, fontweight = 'bold')
+
+    textax.set_title('%s'%varnm, fontweight = 'bold')
+    textax.tick_params(axis = 'both', which = 'both', bottom = False, 
+        top=False, labelbottom=False, left=False, right=False, labelleft=False)
+    textax.spines["top"].set_visible(False)
+    textax.spines["right"].set_visible(False)
+    textax.spines["left"].set_visible(False)
+    textax.spines["bottom"].set_visible(False)
+
+    plt.tight_layout(h_pad = 3)
+
+    if return_figure:
+        return fig
 
 
 def _uv_angle(u, v):
