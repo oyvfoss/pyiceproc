@@ -25,7 +25,8 @@ import gsw
 from sigpyproc.sig_calc import mat_to_py_time
 from matplotlib.dates import date2num, num2date
 
-def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False):
+def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False, 
+                   extrapolate = False):
     '''
     Adds a time series to the Signature dataset. Interpolates onto the "time"
     coordinate (one entry per ensemble).
@@ -44,6 +45,8 @@ def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False):
            include "units", "long_name", etc..
     time_mat: Set to True if *time* is matlab epoch 
               (False/default: python default epoch)
+    extrapolate: If set to true, values will be extrapolated (linearly)
+                 outside the ragne of the input data.
 
     Outputs
     -------
@@ -60,20 +63,12 @@ def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False):
     tstrs_input = (num2date(time[0]).strftime(tfmt), 
                    num2date(time[-1]).strftime(tfmt))
 
-    if False: #TEMPORARY - CHECK!
-        assert (np.floor(time[0])>np.floor(DX.TIME[-1]) or np.floor(
-                time[-1])<np.floor(DX.TIME[0])), (
-            'Time range of input (%s-%s)'%tstrs_input +
-            'Is outside the span of TIME (%s-%s).'%tstrs_DX)
-
-        if (time[0]>DX.TIME[0] or time[-1]<DX.TIME[-1]):
-            raise Warning('Warning: '+
-            'Time range of input (%s-%s)'%tstrs_input +
-            'does not cover the full span of TIME (%s-%s).'%tstrs_DX + 
-            'Will result in NaNs!')
+    interp1d_kws = {'bounds_error':False}
+    if extrapolate:
+        interp1d_kws['fill_value'] = 'extrapolate'
 
     # Interpolatant of the time series
-    data_ip = interp1d(time, data, bounds_error = False)
+    data_ip = interp1d(time, data, **interp1d_kws)
 
     # Add interpolated data to dx
     DX[name] = (('TIME'), data_ip(DX.TIME.data), attrs)
@@ -82,7 +77,7 @@ def add_to_sigdata(DX, data, time, name, attrs = None, time_mat = False):
 
 
 def append_ctd(DX, temp, sal, pres, CTDtime, instr_SN = None, instr_desc = None, 
-                time_mat = False, pressure_offset = 0):
+                time_mat = False, extrapolate = True):
     '''
     Read data from a moored CTD - used for sound speed corrections etc. 
     Converts to TEOS-10 and computes sound speed using the gsw module. 
@@ -112,30 +107,30 @@ def append_ctd(DX, temp, sal, pres, CTDtime, instr_SN = None, instr_desc = None,
     ss = gsw.sound_speed(SA, CT, pres)
     rho = gsw.rho(SA, CT, pres)
 
-    attrs_all = {'Instrument description': instr_desc, 'Instrument SN':None,
+    attrs_all = {'Instrument description': instr_desc, 'Instrument SN':instr_SN,
             'note':'Calculated using the gsw module. Linearly'
             ' interpolated onto Sig500 time grid.'}
     
     DX = add_to_sigdata(DX, SA, CTDtime, 'SA_CTD', 
                 attrs = {'long_name':'Absolute Salinity', 'units':'g kg-1',
                   **attrs_all},
-                time_mat = time_mat)
+                time_mat = time_mat, extrapolate = extrapolate)
     DX = add_to_sigdata(DX, CT, CTDtime, 'CT_CTD', 
                 attrs = {'long_name':'Conservative Temperature', 'units':'degC',
                     **attrs_all},
-                time_mat = time_mat)
+                time_mat = time_mat, extrapolate = extrapolate)
     DX = add_to_sigdata(DX, pres, CTDtime, 'pres_CTD', 
                 attrs = {'long_name':'Pressure (CTD measurements)', 
                     'units':'dbar', **attrs_all},
-                time_mat = time_mat)
+                time_mat = time_mat, extrapolate = extrapolate)
     DX = add_to_sigdata(DX, ss, CTDtime, 'sound_speed_CTD', 
                 attrs = {'long_name':'Sound speed', 'units':'m s-1',
                     **attrs_all},
-                time_mat = time_mat)
+                time_mat = time_mat,  extrapolate = extrapolate)
     DX = add_to_sigdata(DX, rho, CTDtime, 'rho_CTD', 
                 attrs = {'long_name':'Ocean water density (CTD measurements)', 'units':'kg m-3',
                     **attrs_all},
-                time_mat = time_mat)
+                time_mat = time_mat,  extrapolate = extrapolate)
     return DX
 
 
@@ -180,7 +175,7 @@ def append_atm_pres(DX, slp, slptime, attrs = None,
 
 
 def append_magdec(dx, magdec, magdectime = False, attrs = None, 
-                    time_mat = False):
+                    time_mat = False, extrapolate = True):
     '''
     Append magnetic declination angle, used for correcting the heading of 
     observed velocities. 
@@ -217,7 +212,7 @@ def append_magdec(dx, magdec, magdectime = False, attrs = None,
         for nm in attrs:
             attrs_all[nm] = attrs[nm]
 
-    # Append to sig500 data
+    # Append to Signature data
     if hasattr(magdec, '__iter__'): # If this is an array of several 
                                     # magdec values
         if not magdectime:  
@@ -226,7 +221,8 @@ def append_magdec(dx, magdec, magdectime = False, attrs = None,
         else:
             add_to_sigdata(dx, magdec, magdectime, 'magdec', 
                 attrs = attrs_all,
-                time_mat = time_mat)
+                time_mat = time_mat,
+                extrapolate = extrapolate)
 
     else:
         dx['magdec'] = ((), magdec, attrs_all)

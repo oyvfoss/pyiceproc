@@ -147,9 +147,10 @@ def mat_to_py_time(mattime):
 
 ##############################################################################
 
-def daily_median(A, t, td = None, axis = -1, min_frac = 0, ):
+def daily_average(A, t, td = None, axis = -1, min_frac = 0, 
+                function = 'median'):
     '''
-    Take a time series A on a time grid t and compute daily medians of A.
+    Take a time series A on a time grid t and compute daily averages of A.
 
     If day index *td* is not specified, it will be computed based on t. 
 
@@ -191,7 +192,11 @@ def daily_median(A, t, td = None, axis = -1, min_frac = 0, ):
                                             # (we don't need to see it, so we suppress warnings 
                                             # for this operation)
                         warnings.simplefilter("ignore", category=RuntimeWarning)
-                        Ad[..., nn] = np.nanmedian(A[..., tind], axis = -1)
+                        if function == 'median':
+                            Ad[..., nn] = np.nanmedian(A[..., tind], axis = -1)
+                        elif function == 'mean':
+                            Ad[..., nn] = np.nanmean(A[..., tind], axis = -1)
+
     return Ad, td
 
 ##############################################################################

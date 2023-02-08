@@ -2,7 +2,7 @@
 Functions for making open water correction.
 '''
 
-from sigpyproc.sig_calc import runningstat, daily_median
+from sigpyproc.sig_calc import runningstat, daily_average
 from sigpyproc import sig_append, sig_draft
 
 from scipy.interpolate import interp1d
@@ -54,8 +54,8 @@ def get_LP_OWSD(OWSD, thr_reject_from_net_median = 0.15,
     #ax[0].plot(OWSD.TIME, OWSD_med)
 
     # 3. Compute daily medians ()
-    Ad, td = daily_median(OWSD_med, OWSD.TIME, min_frac = min_frac_daily, 
-                         axis = -1, )
+    Ad, td = daily_average(OWSD_med, OWSD.TIME, min_frac = min_frac_daily, 
+                         axis = -1, function = 'median')
     
     # 4. Interpolate to continuous function (daily)
     Ad_interp = interp1d(td.data[~np.isnan(Ad)], Ad[~np.isnan(Ad)], 
@@ -71,33 +71,34 @@ def get_LP_OWSD(OWSD, thr_reject_from_net_median = 0.15,
 
 def get_Beta_from_OWSD(DX, 
         thr_reject_from_net_median = 0.15, 
-        min_frac_daily = 0.025, run_window_days = 3,
-        diagnostics = True):
+        min_frac_daily = 0.025, run_window_days = 3,):
     '''
-    
+    Estimate sound speed correction BETA.
     '''
 
     # Obtain (all) estimates of daily, smoothed OWSDs
-
     OWSD_full_LE = get_OWSD(DX, method = 'LE')
     OWSD_full_AST = get_OWSD(DX, method = 'AST')
 
     # Obtain estimates of daily, smoothed OWSDs
-    OWSD_LP_LE, _ = get_LP_OWSD(OWSD_full_LE)
-    OWSD_LP_AST, td = get_LP_OWSD(OWSD_full_AST)
+    OWSD_LP_LE, _ = get_LP_OWSD(OWSD_full_LE, 
+        thr_reject_from_net_median = thr_reject_from_net_median,
+        min_frac_daily = min_frac_daily)
+    OWSD_LP_AST, td = get_LP_OWSD(OWSD_full_AST, 
+        thr_reject_from_net_median = thr_reject_from_net_median,
+        min_frac_daily = min_frac_daily)
 
 
     # Obtain daily, smoothed instrument depths     
     depth_med = DX.depth.median(dim = 'SAMPLE')
-    depth_med_daily, _ = daily_median(depth_med, DX.TIME, td = td-0.5, 
-                                axis = -1)
+    depth_med_daily, _ = daily_average(depth_med, DX.TIME, td = td-0.5, 
+                                axis = -1, function = 'median')
     RS_depth = runningstat(depth_med_daily, run_window_days)
     depth_lp = RS_depth['mean']
 
     # Obtain Beta (sound speed correction factors)
     BETA_LE = depth_lp/(depth_lp - OWSD_LP_LE)
     BETA_AST = depth_lp/(depth_lp - OWSD_LP_AST)
-    
 
     DX = sig_append.add_to_sigdata(DX, BETA_LE, td, 
             'BETA_open_water_corr_LE')
