@@ -192,7 +192,6 @@ def chop(DX, indices = None, auto_accept = False):
             L0-L1, indices, L0, L1)
     print(net_str)
         
-
     DX.attrs['history'] += '\n- %s'%net_str
     return DX
 
@@ -532,3 +531,23 @@ def _unpack_nested(val):
             unpack = False
     return val
 
+##############################################################################
+if False:
+    def to_nc(DX, filename, icedraft = True, icevel = True, oceanvel = False, 
+                all = False):
+        '''
+        Export to netCDF file.
+        '''
+
+        if all:
+            DX.to_netcdf(filename)
+            print('Saved data with *all* variables to file:\n%s'%filename)
+        else:
+            varlist = []
+            if icedraft:
+                varlist += ['SEA_ICE_DRAFT_LE', 'SEA_ICE_DRAFT_MEDIAN_LE', 
+                    'SEA_ICE_DRAFT_AST', 'SEA_ICE_DRAFT_LE']
+            if icevel:
+                varlist: += ['uice', 'vice', 'Uice', 'Vice']
+        
+            DX
