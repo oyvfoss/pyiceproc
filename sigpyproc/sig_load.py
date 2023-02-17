@@ -213,10 +213,10 @@ def overview(DX):
 
     print('\nTIME RANGE:\n%s  -->  %s  (%.1f days)'%(
         starttime, endtime, ndays))
-    print('Time between ensembles: %.1f min.'%(DX.Plan_ProfileInterval/60))
+    print('Time between ensembles: %.1f min.'%(
+        DX.time_between_ensembles_sec/60))
     print('Time between samples in ensembles: %.1f sec.'%(
         DX.sampling_interval_sec))
-
 
     # Pressure
     med_pres = np.ma.median(DX.Average_AltimeterPressure)
@@ -229,7 +229,7 @@ def overview(DX):
     print('\nSIZE:\nTotal %i time points.'%(DX.dims['TIME']*DX.dims['SAMPLE']))
     print('Split into %i ensembles with %i sample per ensemble.'%(
           DX.dims['TIME'], DX.dims['SAMPLE']))
-    print('Ocean velocity bins: %i.'%(DX.dims['bins']))
+    print('Ocean velocity bins: %i.'%(DX.dims['BINS']))
 
 ##############################################################################
 
@@ -308,9 +308,9 @@ def _reshape_ensembles(DX):
             DXrsh[var_] = (('TIME', 'SAMPLE'), 
                 np.ma.reshape(DX[var_], (Nens, Nsamp_per_ens)),
                 DX[var_].attrs)
-        elif DX[var_].dims == ('bins', 'time_average'):
-            DXrsh[var_] = (('bins', 'TIME', 'SAMPLE'), 
-                    np.ma.reshape(DX[var_], (DX.dims['bins'], 
+        elif DX[var_].dims == ('BINS', 'time_average'):
+            DXrsh[var_] = (('BINS', 'TIME', 'SAMPLE'), 
+                    np.ma.reshape(DX[var_], (DX.dims['BINS'], 
                         Nens, Nsamp_per_ens)),
                     DX[var_].attrs)
         elif DX[var_].dims == ('time_average', 'xyz'):
@@ -356,7 +356,7 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
     # OBTAIN COORDINATES
     coords = {
         'time_average':mat_to_py_time(b['Average_Time']),
-        'bins': np.arange(b['Average_VelEast'].shape[1]),
+        'BINS': np.arange(b['Average_VelEast'].shape[1]),
         'xyz': np.arange(3),
             }
 
@@ -406,8 +406,8 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
             elif b[key].ndim==2:
                 if b[key].shape[1] == dx.dims['xyz']:
                     dx[key] = (('time_average', 'xyz'), b[key])
-                elif b[key].shape[1] == dx.dims['bins']:
-                    dx[key] = (('bins', 'time_average'), 
+                elif b[key].shape[1] == dx.dims['BINS']:
+                    dx[key] = (('BINS', 'time_average'), 
                             b[key].T)
 
         # AverageRawAltimeter fields
@@ -434,7 +434,7 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
     dx.time_average.attrs['description'] = ('Time stamp for'
      ' "average" fields. Source field: *Average_Time*. Converted'
     ' using sig_funcs.mat_to_py_time().') 
-    dx.bins.attrs['description'] = ('Number of velocity bins.') 
+    dx.BINS.attrs['description'] = ('Number of velocity bins.') 
     dx.beams.attrs['description'] = ('Beam number (not 5th).') 
     dx.xyz.attrs['description'] = ('Spatial dimension.') 
     
@@ -466,7 +466,12 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
     dx.attrs['instrument'] = b['conf']['InstrumentName']
     dx.attrs['serial_number'] = b['conf']['SerialNo']
     dx.attrs['samples_per_ensemble'] = int(b['conf']['Average_NPings'])
-
+    dx.attrs['time_between_ensembles_sec'] = int(
+        b['conf']['Plan_ProfileInterval'])
+    dx.attrs['blanking_distance_oceanvel'] = b['conf'][
+                                    'Average_BlankingDistance']
+    dx.attrs['cell_size_oceanvel'] = b['conf']['Average_CellSize']
+    dx.attrs['N_cells_oceanvel'] = b['conf']['Average_NCells']
 
     # Read pressure offset
     pressure_offset = b['conf']['PressureOffset']
