@@ -27,6 +27,7 @@ from IPython.display import display
 from sigpyproc.sig_calc import mat_to_py_time
 from sigpyproc.sig_append import _add_tilt, _add_SIC_FOM, set_lat, set_lon
 from datetime import datetime
+import warnings
 
 ##############################################################################
 
@@ -256,8 +257,16 @@ def _reshape_ensembles(DX):
     # Use the mean time of each ensemble 
     t_ens = 0.5*(DX.time_average.data[ens_starts]
                + DX.time_average.data[ens_ends])
-    Nens = len(t_ens)
-    Nsamp_per_ens = int(Nt/Nens)
+    Nsamp_per_ens = DX.samples_per_ensemble
+    Nens = int(Nt/Nsamp_per_ens)
+
+    if Nens != len(t_ens):
+        warnings.warn('Expected number of ensembles (%i)'%Nens
+        + 'is different from the number of ensembles deduced'
+        + 'from time jumps > 7 minutes (%i).\n'%len(t_ens),
+        + '!! This is likely to cause problems !!\n',
+        + '(Check your time grid!)')
+
     print('%i time points, %i ensembles. Sample per ensemble: %i'%(
          Nt, Nens, Nsamp_per_ens))
 
@@ -285,15 +294,21 @@ def _reshape_ensembles(DX):
 
     # Inherit attributes
     DXrsh.attrs = DX.attrs
+    # Deleting and re-adding the instrument_configuration_details attribute 
+    # (want it to be listed last)
+    del DXrsh.attrs['instrument_configuration_details']
+    DXrsh.attrs['instrument_configuration_details'] = (
+        DX.attrs['instrument_configuration_details'])
+
 
     # Loop through variables, reshape where necessary
     for var_ in DX.variables:
         if DX[var_].dims == ('time_average',):
-            DXrsh[var_] = (('TIME', 'SAMPLE'), 
-                    np.ma.reshape(DX[var_], (Nens, Nsamp_per_ens)),
-                    DX[var_].attrs)
-        elif DX[var_].dims == ('bins', 'time_average'):
 
+            DXrsh[var_] = (('TIME', 'SAMPLE'), 
+                np.ma.reshape(DX[var_], (Nens, Nsamp_per_ens)),
+                DX[var_].attrs)
+        elif DX[var_].dims == ('bins', 'time_average'):
             DXrsh[var_] = (('bins', 'TIME', 'SAMPLE'), 
                     np.ma.reshape(DX[var_], (DX.dims['bins'], 
                         Nens, Nsamp_per_ens)),
@@ -368,9 +383,7 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
     # IMPORT DATA AND ADD TO XARRAY DATASET
     # Looping through variables. Assigning to dataset 
     # as fields with the appropriate dimensions.
-
     for key in b.keys():
-        #print('%s: %s..\r'%(filename[-10:], key), end = '') 
         
         # AverageIce fields
         if 'AverageIce_' in key:
@@ -432,18 +445,28 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
             ' using mat_to_py_time.') 
         dx.along_altimeter.attrs['description'] = ('Index along altimeter.') 
 
+    # Read the configuration info to a single string (gets cumbersome to 
+    # carry these around as attributes..) 
+    conf_str = ''
     for conf_ in b['conf']:
-       dx.attrs[conf_] = b['conf'][conf_]
- 
-    units_str = ''
-    for unit_ in b['units']:
-        units_str += '%s: %s\n'%(unit_, b['units'][unit_])
-    dx.attrs['units'] = units_str
+        if conf_ in b['units'].keys():
+            unit_str = ' %s'%b['units'][conf_]
+        else:
+            unit_str = ''
+        if conf_ in b['desc'].keys():
+            desc_str = ' (%s)'%b['desc'][conf_]
+        else:
+            desc_str = ''
 
-    desc_str = ''
-    for desc_ in b['desc']:
-        desc_str += '%s: %s\n'%(desc_, b['desc'][desc_])
-    dx.attrs['desc'] = desc_str
+        conf_str += '%s%s: %s%s\n'%(conf_, desc_str, 
+                         b['conf'][conf_], unit_str, )
+    dx.attrs['instrument_configuration_details'] = conf_str
+
+    # Add some selected attributes that are useful
+    dx.attrs['instrument'] = b['conf']['InstrumentName']
+    dx.attrs['serial_number'] = b['conf']['SerialNo']
+    dx.attrs['samples_per_ensemble'] = int(b['conf']['Average_NPings'])
+
 
     # Read pressure offset
     pressure_offset = b['conf']['PressureOffset']
@@ -532,22 +555,56 @@ def _unpack_nested(val):
     return val
 
 ##############################################################################
-if False:
-    def to_nc(DX, filename, icedraft = True, icevel = True, oceanvel = False, 
-                all = False):
-        '''
-        Export to netCDF file.
-        '''
+def to_nc(DX, file_path, export_vars = [], icedraft = True, icevel = True, 
+            oceanvel = False, all = False,):
+    '''
+    Export to netCDF file.
 
-        if all:
-            DX.to_netcdf(filename)
-            print('Saved data with *all* variables to file:\n%s'%filename)
-        else:
-            varlist = []
-            if icedraft:
-                varlist += ['SEA_ICE_DRAFT_LE', 'SEA_ICE_DRAFT_MEDIAN_LE', 
-                    'SEA_ICE_DRAFT_AST', 'SEA_ICE_DRAFT_LE']
-            if icevel:
-                varlist: += ['uice', 'vice', 'Uice', 'Vice']
-        
-            DX
+    Inputs
+    ------
+    file_path: Path of output file. 
+    export_vars: List of variables to influde in the exported ncfile.
+    icedraft: Include sea ice draft estimates.
+    icevel: Include sea ice drift velocities.
+    oceanvel: Include ocean velocities.
+    all: Include *all* variables, including everything in the original source 
+         files.
+    '''
+
+    DXc = DX.copy()
+
+    if all:
+        print('Saving *ALL* variables..')
+    else:
+        varlist = export_vars.copy()
+        if icedraft:
+            varlist += ['SEA_ICE_DRAFT_LE', 'SEA_ICE_DRAFT_MEDIAN_LE', 
+                'SEA_ICE_DRAFT_AST', 'SEA_ICE_DRAFT_LE']
+        if icevel:
+            varlist += ['uice', 'vice', 'Uice', 'Vice']
+        if oceanvel:
+            varlist += ['uocean', 'vocean', 'Uocean', 'Vocean']
+
+        # Remove any duplicates
+        varlist = list(np.unique(np.array(varlist)))
+
+        # Remove any variables not in DX
+        for varnm_ in varlist.copy():
+            if varnm_ not in list(DXc.keys()):
+                varlist.remove(varnm_)
+                if varnm_ in export_vars:
+                    warnings.warn('No field %s found in the data '%varnm_
+                     + '(exporting file without it). Check spelling?')
+
+        # If varlist is empty: Print a note and exit
+        if varlist == []:
+            print('No existing variables selected -> Not exporting anything.')
+            return None
+
+        # Delete some none-useful attributes
+        for attr_not_useful in ['pressure_offset']:
+            del DXc.attributes[attr_not_useful]
+
+        # Saving
+        DXc[varlist].to_netcdf(file_path)
+        print('Saved data to file:\n%s'%file_path)
