@@ -365,7 +365,9 @@ def _matfile_to_dataset(filename, lat = None, lon = None,
             coords.update({'beams':np.arange(
                 len(b['AverageRawAltimeter_BeamToChannelMapping'])),
                 'along_altimeter':np.arange(
-                    b['AverageRawAltimeter_AmpBeam5'].shape[1])})
+                    b['AverageRawAltimeter_AmpBeam5'].shape[1]),
+                'raw_altimeter_time':mat_to_py_time(
+                    b['AverageRawAltimeter_Time'])})
         except:
             print('No *AverageRawAltimeter*')
 

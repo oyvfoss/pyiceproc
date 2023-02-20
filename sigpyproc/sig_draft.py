@@ -5,9 +5,15 @@ Functions for calculating sea ice draft
 '''
 import numpy as np
 
-def calculate_draft(DX, corr_sound_speed_CTD = True, qual_thr = 8000):
+def calculate_draft(DX, corr_sound_speed_CTD = True, qual_thr = 8000,
+                    LE_correction = 'AST'):
     '''
     Calculate ice draft.  
+
+
+    If LE_correction = 'AST', the open water sound speed correction (if 
+    available) of the LE-derived draft will be based on the AST open water 
+    offset.   
     '''
 
 
@@ -54,10 +60,15 @@ def calculate_draft(DX, corr_sound_speed_CTD = True, qual_thr = 8000):
 
 
 def calculate_surface_position(DX, corr_sound_speed_CTD = True, 
-                                 qual_thr = 8000, le_ast ='AST'):
+                                 qual_thr = 8000, le_ast ='AST', 
+                                 LE_correction = 'AST'):
     '''
     Calculate distance between the surface measured by the altimeter 
     and the (mean) ocean surface.  
+
+    If LE_correction = 'AST', the open water sound speed correction (if 
+    available) of the LE-derived draft will be based on the AST open water 
+    offset.   
     '''
     le_ast = le_ast.upper()
     if le_ast == 'AST':
@@ -83,6 +94,10 @@ def calculate_surface_position(DX, corr_sound_speed_CTD = True,
            '  (*sound_speed* undefined) -> USING PRE-PROGRAMMED, NOMINAL VALUE!')    
 
     beta_key = 'BETA_open_water_corr_%s'%le_ast
+
+    if LE_correction:
+        beta_key = 'BETA_open_water_corr_AST'
+
     if hasattr(DX, beta_key):
         BETA_ow = (DX[beta_key].data[:, np.newaxis]
                      * np.ones(DX.depth.shape))
