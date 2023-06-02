@@ -27,7 +27,7 @@ def calculate_ice_vel(DX, avg_method = 'median'):
         DX[key].attrs['processing_history'] = (
             'Loaded from AverageIce_VelEast/AverageIce_VelEast fields.\n')
 
-    DX = DX._calculate_uvice_avg(DX, avg_method = avg_method)
+    DX = _calculate_uvice_avg(DX, avg_method = avg_method)
 
     return DX 
 

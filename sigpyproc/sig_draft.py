@@ -30,7 +30,8 @@ def calculate_draft(DX, corr_sound_speed_CTD = True, qual_thr = 8000,
     # Get surface position (LE and AST)
     for le_ast in ['LE', 'AST']:
         DX = calculate_surface_position(DX, qual_thr = qual_thr,
-             corr_sound_speed_CTD = corr_sound_speed_CTD, le_ast =le_ast)
+             corr_sound_speed_CTD = corr_sound_speed_CTD, le_ast =le_ast,
+             LE_correction = LE_correction)
 
     # Reject LE measurements where LE diverges from AST by >0.5 m
     DX['SURFACE_DEPTH_LE_UNCAPPED'] = DX['SURFACE_DEPTH_LE']
@@ -102,7 +103,7 @@ def calculate_surface_position(DX, corr_sound_speed_CTD = True,
 
     beta_key = 'BETA_open_water_corr_%s'%le_ast
 
-    if LE_correction:
+    if LE_correction=='AST':
         beta_key = 'BETA_open_water_corr_AST'
 
     if hasattr(DX, beta_key):
@@ -246,7 +247,7 @@ def compare_OW_correction(DX, show_plots = True):
 
     DX0 = DX.copy()
     DX2 = DX.copy()
-    DX2 = sig_draft.calculate_draft(DX2)
+    DX2 = calculate_draft(DX2)
 
 
     print('LE: Mean (median) offset: %.1f cm (%.1f cm)'%(

@@ -22,7 +22,7 @@ def plot_ellipse_icevel(DX, lp_days = 5, ax = None,
 
     print('ELLIPSE PLOT: Low pass filtering..    \r', end = '')
     # LPFed 
-    wlen = int(np.round(lp_days/(DX.Plan_ProfileInterval/60/60/24)))
+    wlen = int(np.round(lp_days/(DX.sampling_interval_sec/60/60/24)))
     ULP = np.convolve(uip, np.ones(wlen)/wlen,
                 mode = 'valid')[::wlen]
     VLP = np.convolve(vip, np.ones(wlen)/wlen,

@@ -610,7 +610,8 @@ def to_nc(DX, file_path, export_vars = [], icedraft = True, icevel = True,
 
         # Delete some none-useful attributes
         for attr_not_useful in ['pressure_offset']:
-            del DXc.attributes[attr_not_useful]
+
+            del DXc.attrs[attr_not_useful]
 
         # Saving
         DXc[varlist].to_netcdf(file_path)
