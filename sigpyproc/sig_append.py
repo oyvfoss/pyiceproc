@@ -215,7 +215,7 @@ def append_magdec(dx, magdec, magdectime = False, attrs = None,
     # Append to Signature data
     if hasattr(magdec, '__iter__'): # If this is an array of several 
                                     # magdec values
-        if not magdectime:  
+        if not hasattr(magdec, '__iter__'):  
             raise Exception('Looks like you supplied a time-varying'
             '*magdec* but not the required time stamps *magdectime*..')
         else:
