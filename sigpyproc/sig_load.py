@@ -21,7 +21,7 @@ TO DO:
 import numpy as np
 from scipy.io import loadmat
 import xarray as xr
-from matplotlib.dates import num2date 
+from matplotlib.dates import num2date, date2num
 import matplotlib.pyplot as plt 
 from IPython.display import display
 from sigpyproc.sig_calc import mat_to_py_time
@@ -32,7 +32,8 @@ import warnings
 ##############################################################################
 
 def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
-                include_raw_altimeter = False, FOM_ice_threshold = 1e4):
+                include_raw_altimeter = False, FOM_ice_threshold = 1e4,
+                time_range = [None, None]):
     '''
     Read, convert, and concatenate .mat files exported from SignatureDeployment.
 
@@ -50,13 +51,30 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
     FOM_ice_threshold: Threshold for "Figure of Merit" in the ice ADCP pings
                        used to separate measurements in ice from measurements
                        of water. 
+    time_range: Only accept data within this date range (default: including 
+                everything) 
 
+                Give a tuple of date strings 'DD.MM.YYYY' 
+
+                E.g.: time_range = [None, '21.08.2022']
+                
     Output:
     -------
 
     xarray Dataset containing the data.
 
     '''
+
+    # Get max/min times:
+    date_fmt = '%d.%m.%Y' 
+    if time_range[0]: 
+        time_min = date2num(datetime.strptime(time_range[0], date_fmt))
+    else: 
+        time_min = None
+    if time_range[1]: 
+        time_max = date2num(datetime.strptime(time_range[1], date_fmt))
+    else:
+        time_max = None
 
     ###########################################################################
     # LOAD AND CONCATENATE DATA 
@@ -74,7 +92,9 @@ def matfiles_to_dataset(file_list, reshape = True, lat = None, lon = None,
         dx, pressure_offset = _matfile_to_dataset(filename,
             lat = lat, lon = lon, 
             include_raw_altimeter = include_raw_altimeter)
-        
+
+        dx = dx.sel({'time_average':slice(time_min, time_max)})
+
         pressure_offsets = np.append(pressure_offsets, pressure_offset)
 
         if first: 
@@ -263,8 +283,8 @@ def _reshape_ensembles(DX):
     if Nens != len(t_ens):
         warnings.warn('Expected number of ensembles (%i)'%Nens
         + 'is different from the number of ensembles deduced'
-        + 'from time jumps > 7 minutes (%i).\n'%len(t_ens),
-        + '!! This is likely to cause problems !!\n',
+        + 'from time jumps > 7 minutes (%i).\n'%len(t_ens)
+        + '!! This is likely to cause problems !!\n'
         + '(Check your time grid!)')
 
     print('%i time points, %i ensembles. Sample per ensemble: %i'%(
