@@ -266,20 +266,24 @@ def _add_tilt(DX):
             'See Mantovanelli et al 2014 and Woodgate et al 2011.'),}
 
     try:
+        cos_tilt = (np.cos(DX.Average_Pitch.data/180*np.pi)
+                    * np.cos(DX.Average_Roll.data/180*np.pi))
+        
+
         DX['tilt_Average'] = (('time_average'), 
-            180 / np.pi* np.arccos(np.sqrt(
-            1 - np.sin(DX.Average_Pitch.data/180*np.pi) ** 2
-            - np.sin(DX.Average_Roll.data/180*np.pi) ** 2)))
-        DX['tilt_Average'].attrs  =  tilt_attrs
+            180 / np.pi* np.arccos(cos_tilt), tilt_attrs)
+      #  DX['tilt_Average'].attrs  =  tilt_attrs
     except:
+        print('AAA')
+        return tilt_attrs, cos_tilt
         pass
 
     try:
+        cos_tilt_avgice = (np.cos(DX.AverageIce_Pitch.data/180*np.pi)
+                    * np.cos(DX.AverageIce_Roll.data/180*np.pi))
         DX['tilt_AverageIce'] = (('time_average'), 
-            180 / np.pi* np.arccos(np.sqrt(
-            1 - np.sin(DX.AverageIce_Pitch.data/180*np.pi) ** 2
-            - np.sin(DX.AverageIce_Roll.data/180*np.pi) ** 2)))
-        DX['tilt_AverageIce'].attrs  = tilt_attrs
+            180 / np.pi* np.arccos(cos_tilt_avgice), tilt_attrs)
+       # DX['tilt_AverageIce'].attrs  = tilt_attrs
     except:
         pass
 

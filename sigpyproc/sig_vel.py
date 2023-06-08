@@ -7,6 +7,7 @@ Functions for processing ocean and sea ice drift velocity.
 import numpy as np
 import xarray as xr
 from scipy.interpolate import interp1d
+import warnings 
 
 def calculate_ice_vel(DX, avg_method = 'median'):
     '''
@@ -41,6 +42,7 @@ def _calculate_uvice_avg(DX, avg_method = 'median'):
     if avg_method=='median':
         DX['Uice'] = DX['uice'].median(dim = 'SAMPLE')
         DX['Vice'] = DX['vice'].median(dim = 'SAMPLE')
+
     elif avg_method=='mean':
         DX['Uice'] = DX['uice'].mean(dim = 'SAMPLE')
         DX['Vice'] = DX['vice'].mean(dim = 'SAMPLE')
@@ -57,10 +59,13 @@ def _calculate_uvice_avg(DX, avg_method = 'median'):
         'details': 'Ensemble average (%s)'%avg_method, 
         'processing_history' : DX.vice.processing_history} 
 
+    with warnings.catch_warnings(): # Suppressing (benign) warning yielded 
+        # when computing std() over all-nan slice..
+        warnings.filterwarnings(action='ignore', 
+            message='Degrees of freedom <= 0 for slice')
+        DX['Uice_SD'] = DX['uice'].std(dim = 'SAMPLE', skipna = True)
+        DX['Vice_SD'] = DX['vice'].std(dim = 'SAMPLE', skipna = True)
 
-    DX['Uice_SD'] = DX['uice'].std(dim = 'SAMPLE')
-    DX['Vice_SD'] = DX['vice'].std(dim = 'SAMPLE')
-    
     DX.Uice_SD.attrs = {'units':'m s-1', 
         'long_name':('Ensemble standard deviation of '
                 'eastward sea ice drift velocity'), } 
@@ -442,8 +447,8 @@ def interp_oceanvel(DX, ip_depth):
     Interpolate Uocean, Vocean onto a fixed depth *ip_depth*
     '''
 
-    U_IP = DX.Uocean.mean('BINS', keep_attrs = True).copy()#*np.nan
-    V_IP = DX.Vocean.mean('BINS', keep_attrs = True).copy()#*np.nan
+    U_IP = DX.Uocean.mean('BINS', keep_attrs = True).copy()
+    V_IP = DX.Vocean.mean('BINS', keep_attrs = True).copy()
     U_IP[:] = np.nan
     V_IP[:] = np.nan
 

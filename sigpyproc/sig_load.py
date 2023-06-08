@@ -602,6 +602,9 @@ def to_nc(DX, file_path, export_vars = [], icedraft = True, icevel = True,
 
     if all:
         print('Saving *ALL* variables..')
+        # Saving
+        DXc.to_netcdf(file_path)
+        print('Saved data to file:\n%s'%file_path)
     else:
         varlist = export_vars.copy()
         if icedraft:

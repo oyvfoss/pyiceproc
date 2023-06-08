@@ -246,3 +246,18 @@ def runningstat(A, window_size):
           'std' : np.std(A[index], axis = 1)}
 
     return RS
+
+##### 
+
+def clean_nanmedian(a, **kwargs):
+    '''
+    Wrapper for the np.nanmedian function, but ignoring the annoying  
+    RuntimeWarning when trynig to get the nanmedian of an all-NaN slice.
+
+    (Retaining default behaviour of returning NaN as the median of 
+    all-NaN slices)
+    '''
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action='ignore', 
+                                message='All-NaN slice encountered')
+        return np.nanmedian(a, **kwargs)

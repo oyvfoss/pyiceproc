@@ -7,8 +7,7 @@ Functions for calculating sea ice draft
 import numpy as np
 from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
-
-from sigpyproc.sig_calc import runningstat, daily_average
+from sigpyproc.sig_calc import runningstat, daily_average, clean_nanmedian
 from sigpyproc import sig_append
 
 
@@ -55,7 +54,7 @@ def calculate_draft(DX, corr_sound_speed_CTD = True, qual_thr = 8000,
                     DX['SEA_ICE_DRAFT_%s'%le_ast]>-0.3)
 
         DX['SEA_ICE_DRAFT_MEDIAN_%s'%le_ast] = (('TIME'), 
-            np.nanmedian(si_draft_, axis=1),  {'long_name':
+            clean_nanmedian(si_draft_, axis=1),  {'long_name':
             'Median sea ice draft of each ensemble (%s)'%le_ast, 'units':'m', 
             'note':DX['SURFACE_DEPTH_%s'%le_ast].note + 
                 '\n\nOnly counting instances with sea ice presence.'})
@@ -252,19 +251,19 @@ def compare_OW_correction(DX, show_plots = True):
 
     print('LE: Mean (median) offset: %.1f cm (%.1f cm)'%(
         DX.OW_surface_before_correction_LE.mean()*1e2, 
-        np.nanmedian(DX.OW_surface_before_correction_LE)*1e2))
+        clean_nanmedian(DX.OW_surface_before_correction_LE)*1e2))
 
     print('AST: Mean (median) offset: %.1f cm (%.1f cm)'%(
         DX.OW_surface_before_correction_AST.mean()*1e2, 
-        np.nanmedian(DX.OW_surface_before_correction_AST)*1e2))
+        clean_nanmedian(DX.OW_surface_before_correction_AST)*1e2))
 
     print('LE: Mean (median) dBETA: %.1f (%.1f)'%(
         (DX.BETA_open_water_corr_LE.mean()-1)*1e3, 
-        (np.nanmedian(DX.BETA_open_water_corr_LE)-1)*1e3))
+        (clean_nanmedian(DX.BETA_open_water_corr_LE)-1)*1e3))
 
     print('AST: Mean (median) dBETA: %.1f (%.1f)'%(
         (DX.BETA_open_water_corr_AST-1).mean()*1e3, 
-        np.nanmedian((DX.BETA_open_water_corr_AST)-1)*1e3))
+        clean_nanmedian((DX.BETA_open_water_corr_AST)-1)*1e3))
 
 
     print('LE - MEAN SEA ICE DRAFT:\n'+

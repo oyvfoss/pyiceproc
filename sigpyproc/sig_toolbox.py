@@ -159,8 +159,6 @@ def histogram(DX, varnm, hrange = None, nbins = 50,
     textax.spines["left"].set_visible(False)
     textax.spines["bottom"].set_visible(False)
 
-    plt.tight_layout(h_pad = 3)
-
     if return_figure:
         return fig
 
