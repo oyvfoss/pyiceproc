@@ -1,4 +1,4 @@
-# `SigPyProc`
+# `PyIceProc`
 
 ![](misc/sig_illustration.png?)
 
