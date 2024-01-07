@@ -1,6 +1,6 @@
 # `PyIceProc`
 
-![](misc/sig_illustration.png?)
+![](misc/sig_illustration.png)
 
 Version 0.0.1: *Under development.* 
 ______
